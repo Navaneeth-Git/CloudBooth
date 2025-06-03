@@ -111,4 +111,5 @@ This project is licensed under the [Apache License 2.0](LICENSE).
 ## 🙏 Acknowledgments
 
 Developed by [Navaneeth-Git](https://github.com/Navaneeth-Git).  
+<a href="https://www.flaticon.com/free-icons/synchronize" title="synchronize icons">Synchronize icons created by Tempo_doloe - Flaticon</a>
 If you find this project helpful, consider starring the repository or contributing!
