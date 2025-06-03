@@ -72,9 +72,10 @@ Due to the absence of a paid Apple Developer account, CloudBooth isn't available
 
 If you're looking for a pre-built version (Swift executable) of **CloudBooth**, you can find it in this repository:
 
-👉 [CloudBooth Executable Repository](https://github.com/Navaneeth-Git/CloudBooth/releases)
+👉 [CloudBooth Executable Repository](https://github.com/Navaneeth-Git/CloudBooth-Swift-Executable)
 
 ## 📸 Screenshots
+![256](https://github.com/user-attachments/assets/6fdafaf7-5e98-4b6c-9617-f965cf69503a)
 
 <p float="left">
   <img src="https://github.com/user-attachments/assets/fe14f595-43ff-4eca-8304-8db08b5a0c00" width="45%" />
@@ -105,7 +106,7 @@ It automatically copies any new media files (photos/videos) to a designated fold
 
 ## 🧾 License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [Apache License 2.0](LICENSE).
 
 ## 🙏 Acknowledgments
 
