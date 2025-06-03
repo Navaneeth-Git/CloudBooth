@@ -1,0 +1,556 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		1FF6E3452DEF8B47006A37F4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1FF6E32E2DEF8B45006A37F4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1FF6E3352DEF8B45006A37F4;
+			remoteInfo = CloudBooth;
+		};
+		1FF6E34F2DEF8B47006A37F4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1FF6E32E2DEF8B45006A37F4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1FF6E3352DEF8B45006A37F4;
+			remoteInfo = CloudBooth;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1FF6E3362DEF8B45006A37F4 /* CloudBooth.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudBooth.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1FF6E3442DEF8B47006A37F4 /* CloudBoothTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CloudBoothTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1FF6E34E2DEF8B47006A37F4 /* CloudBoothUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CloudBoothUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		1FF6E3382DEF8B45006A37F4 /* CloudBooth */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CloudBooth;
+			sourceTree = "<group>";
+		};
+		1FF6E3472DEF8B47006A37F4 /* CloudBoothTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CloudBoothTests;
+			sourceTree = "<group>";
+		};
+		1FF6E3512DEF8B47006A37F4 /* CloudBoothUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CloudBoothUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1FF6E3332DEF8B45006A37F4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1FF6E3412DEF8B47006A37F4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1FF6E34B2DEF8B47006A37F4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1FF6E32D2DEF8B45006A37F4 = {
+			isa = PBXGroup;
+			children = (
+				1FF6E3382DEF8B45006A37F4 /* CloudBooth */,
+				1FF6E3472DEF8B47006A37F4 /* CloudBoothTests */,
+				1FF6E3512DEF8B47006A37F4 /* CloudBoothUITests */,
+				1FF6E3372DEF8B45006A37F4 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		1FF6E3372DEF8B45006A37F4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1FF6E3362DEF8B45006A37F4 /* CloudBooth.app */,
+				1FF6E3442DEF8B47006A37F4 /* CloudBoothTests.xctest */,
+				1FF6E34E2DEF8B47006A37F4 /* CloudBoothUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1FF6E3352DEF8B45006A37F4 /* CloudBooth */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1FF6E3582DEF8B47006A37F4 /* Build configuration list for PBXNativeTarget "CloudBooth" */;
+			buildPhases = (
+				1FF6E3322DEF8B45006A37F4 /* Sources */,
+				1FF6E3332DEF8B45006A37F4 /* Frameworks */,
+				1FF6E3342DEF8B45006A37F4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1FF6E3382DEF8B45006A37F4 /* CloudBooth */,
+			);
+			name = CloudBooth;
+			packageProductDependencies = (
+			);
+			productName = CloudBooth;
+			productReference = 1FF6E3362DEF8B45006A37F4 /* CloudBooth.app */;
+			productType = "com.apple.product-type.application";
+		};
+		1FF6E3432DEF8B47006A37F4 /* CloudBoothTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1FF6E35B2DEF8B47006A37F4 /* Build configuration list for PBXNativeTarget "CloudBoothTests" */;
+			buildPhases = (
+				1FF6E3402DEF8B47006A37F4 /* Sources */,
+				1FF6E3412DEF8B47006A37F4 /* Frameworks */,
+				1FF6E3422DEF8B47006A37F4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1FF6E3462DEF8B47006A37F4 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				1FF6E3472DEF8B47006A37F4 /* CloudBoothTests */,
+			);
+			name = CloudBoothTests;
+			packageProductDependencies = (
+			);
+			productName = CloudBoothTests;
+			productReference = 1FF6E3442DEF8B47006A37F4 /* CloudBoothTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		1FF6E34D2DEF8B47006A37F4 /* CloudBoothUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1FF6E35E2DEF8B47006A37F4 /* Build configuration list for PBXNativeTarget "CloudBoothUITests" */;
+			buildPhases = (
+				1FF6E34A2DEF8B47006A37F4 /* Sources */,
+				1FF6E34B2DEF8B47006A37F4 /* Frameworks */,
+				1FF6E34C2DEF8B47006A37F4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1FF6E3502DEF8B47006A37F4 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				1FF6E3512DEF8B47006A37F4 /* CloudBoothUITests */,
+			);
+			name = CloudBoothUITests;
+			packageProductDependencies = (
+			);
+			productName = CloudBoothUITests;
+			productReference = 1FF6E34E2DEF8B47006A37F4 /* CloudBoothUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1FF6E32E2DEF8B45006A37F4 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					1FF6E3352DEF8B45006A37F4 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					1FF6E3432DEF8B47006A37F4 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 1FF6E3352DEF8B45006A37F4;
+					};
+					1FF6E34D2DEF8B47006A37F4 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 1FF6E3352DEF8B45006A37F4;
+					};
+				};
+			};
+			buildConfigurationList = 1FF6E3312DEF8B45006A37F4 /* Build configuration list for PBXProject "CloudBooth" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 1FF6E32D2DEF8B45006A37F4;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 1FF6E3372DEF8B45006A37F4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1FF6E3352DEF8B45006A37F4 /* CloudBooth */,
+				1FF6E3432DEF8B47006A37F4 /* CloudBoothTests */,
+				1FF6E34D2DEF8B47006A37F4 /* CloudBoothUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1FF6E3342DEF8B45006A37F4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1FF6E3422DEF8B47006A37F4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1FF6E34C2DEF8B47006A37F4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1FF6E3322DEF8B45006A37F4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1FF6E3402DEF8B47006A37F4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1FF6E34A2DEF8B47006A37F4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		1FF6E3462DEF8B47006A37F4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1FF6E3352DEF8B45006A37F4 /* CloudBooth */;
+			targetProxy = 1FF6E3452DEF8B47006A37F4 /* PBXContainerItemProxy */;
+		};
+		1FF6E3502DEF8B47006A37F4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1FF6E3352DEF8B45006A37F4 /* CloudBooth */;
+			targetProxy = 1FF6E34F2DEF8B47006A37F4 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1FF6E3562DEF8B47006A37F4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = LJG2AQD4SH;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		1FF6E3572DEF8B47006A37F4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = LJG2AQD4SH;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		1FF6E3592DEF8B47006A37F4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CloudBooth/CloudBooth.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LJG2AQD4SH;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nav.CloudBooth;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		1FF6E35A2DEF8B47006A37F4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CloudBooth/CloudBooth.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LJG2AQD4SH;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nav.CloudBooth;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		1FF6E35C2DEF8B47006A37F4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LJG2AQD4SH;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nav.CloudBoothTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CloudBooth.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CloudBooth";
+			};
+			name = Debug;
+		};
+		1FF6E35D2DEF8B47006A37F4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LJG2AQD4SH;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nav.CloudBoothTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CloudBooth.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CloudBooth";
+			};
+			name = Release;
+		};
+		1FF6E35F2DEF8B47006A37F4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LJG2AQD4SH;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nav.CloudBoothUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = CloudBooth;
+			};
+			name = Debug;
+		};
+		1FF6E3602DEF8B47006A37F4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LJG2AQD4SH;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nav.CloudBoothUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = CloudBooth;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1FF6E3312DEF8B45006A37F4 /* Build configuration list for PBXProject "CloudBooth" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1FF6E3562DEF8B47006A37F4 /* Debug */,
+				1FF6E3572DEF8B47006A37F4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1FF6E3582DEF8B47006A37F4 /* Build configuration list for PBXNativeTarget "CloudBooth" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1FF6E3592DEF8B47006A37F4 /* Debug */,
+				1FF6E35A2DEF8B47006A37F4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1FF6E35B2DEF8B47006A37F4 /* Build configuration list for PBXNativeTarget "CloudBoothTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1FF6E35C2DEF8B47006A37F4 /* Debug */,
+				1FF6E35D2DEF8B47006A37F4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1FF6E35E2DEF8B47006A37F4 /* Build configuration list for PBXNativeTarget "CloudBoothUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1FF6E35F2DEF8B47006A37F4 /* Debug */,
+				1FF6E3602DEF8B47006A37F4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 1FF6E32E2DEF8B45006A37F4 /* Project object */;
+}
