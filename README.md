@@ -75,7 +75,8 @@ If you're looking for a pre-built version (Swift executable) of **CloudBooth**, 
 👉 [CloudBooth Executable Repository](https://github.com/Navaneeth-Git/CloudBooth-Swift-Executable)
 
 ## 📸 Screenshots
-![256](https://github.com/user-attachments/assets/6fdafaf7-5e98-4b6c-9617-f965cf69503a)
+
+![64](https://github.com/user-attachments/assets/5b7fd386-7b23-4468-8f10-1015919bb4f7)
 
 <p float="left">
   <img src="https://github.com/user-attachments/assets/fe14f595-43ff-4eca-8304-8db08b5a0c00" width="45%" />
@@ -111,5 +112,5 @@ This project is licensed under the [Apache License 2.0](LICENSE).
 ## 🙏 Acknowledgments
 
 Developed by [Navaneeth-Git](https://github.com/Navaneeth-Git).  
-<a href="https://www.flaticon.com/free-icons/synchronize" title="synchronize icons">Synchronize icons created by Tempo_doloe - Flaticon</a>
 If you find this project helpful, consider starring the repository or contributing!
+<a href="https://www.flaticon.com/free-icons/synchronize" title="synchronize icons">Synchronize icons created by Tempo_doloe - Flaticon</a>
