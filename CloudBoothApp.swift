@@ -3,9 +3,25 @@ import AppKit
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var menuBarController: MenuBarController?
+    var statusItem: NSStatusItem!
+    override init() {
+        super.init()
+        _ = MenuBarController.shared // Keep for popover logic
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Create the status item ONCE
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        if let button = statusItem.button {
+            button.image = NSImage(systemSymbolName: "icloud", accessibilityDescription: "CloudBooth")
+            button.action = #selector(statusItemClicked)
+            button.target = self
+        }
         menuBarController = MenuBarController.shared
+    }
+
+    @objc func statusItemClicked() {
+        menuBarController?.togglePopover()
     }
 }
 
@@ -73,8 +89,8 @@ struct CloudBoothApp: App {
                 }
             }
         }
-        .onChange(of: showSettingsWindow) { newValue in
-            if newValue {
+        .onChange(of: showSettingsWindow) { _, _ in
+            if showSettingsWindow {
                 Task { @MainActor in
                     openWindow(
                         title: "CloudBooth Settings",
@@ -89,8 +105,8 @@ struct CloudBoothApp: App {
                 }
             }
         }
-        .onChange(of: showHistoryWindow) { newValue in
-            if newValue {
+        .onChange(of: showHistoryWindow) { _, _ in
+            if showHistoryWindow {
                 Task { @MainActor in
                     openWindow(
                         title: "Sync History",
