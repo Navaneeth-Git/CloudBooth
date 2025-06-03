@@ -16,37 +16,26 @@ struct ContentView: View {
     @State private var showHistorySheet = false
     @State private var animateSync = false
     @State private var animateUpload = false
+    @State private var showAttributionSheet = false
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             headerView
-            
             Divider()
-            
             ScrollView {
                 VStack(spacing: 24) {
-                    // Status card
                     statusCard
-                    
-                    // Folders card
                     foldersCard
-                    
-                    // Auto-sync info
                     if settings.autoSyncInterval != .never {
                         autoSyncCard
                     }
                 }
                 .padding()
             }
-            
-            Spacer()
-            
-            // Bottom action bar
             actionBar
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .frame(width: 480, height: 600)
+        .frame(minWidth: 480, minHeight: 600)
         .alert("Permission Required", isPresented: $showPermissionAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -57,6 +46,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showHistorySheet) {
             HistoryView()
+        }
+        .sheet(isPresented: $showAttributionSheet) {
+            AttributionView()
         }
         .onAppear {
             checkPermissions()
@@ -323,7 +315,17 @@ struct ContentView: View {
             }
             .buttonStyle(.borderless)
             .help("Settings")
-            
+
+            // Info button
+            Button(action: {
+                showAttributionSheet = true
+            }) {
+                Image(systemName: "info.circle")
+                    .font(.title3)
+            }
+            .buttonStyle(.borderless)
+            .help("About / Attribution")
+
             Spacer()
             
             // Sync Button
@@ -651,6 +653,26 @@ struct ContentView: View {
         }
         
         return filesCopied
+    }
+}
+
+struct AttributionView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Built in Xcode. Deployed nowhere.")
+                .font(.headline)
+            HStack(spacing: 4) {
+                Text("By")
+                Link(destination: URL(string: "https://github.com/Navaneeth-Git")!) {
+                    Text("Navaneeth")
+                        .underline()
+                }
+            }
+            .font(.title3)
+            Spacer()
+        }
+        .padding()
+        .frame(width: 320, height: 180)
     }
 }
 

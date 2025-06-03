@@ -19,8 +19,7 @@ struct CloudBoothApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .frame(width: 480, height: 600)
-                .fixedSize()
+                .frame(minWidth: 480, minHeight: 600)
                 .environmentObject(settings)
                 .alwaysOnTop()
                 .onAppear {
