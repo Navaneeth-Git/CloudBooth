@@ -77,8 +77,8 @@ If you're looking for a pre-built version (Swift executable) of **CloudBooth**, 
 ## 📸 Screenshots
 
 <p float="left">
-  <img src="https://github.com/user-attachments/assets/fe14f595-43ff-4eca-8304-8db08b5a0c00" width="45%" />
-  <img src="https://github.com/user-attachments/assets/0d06cdc2-2c1d-42ed-a219-35daf7b0c34c" width="45%" />
+  <img src="https://github.com/user-attachments/assets/fe14f595-43ff-4eca-8304-8db08b5a0c00" width="50%" />
+  <img src="https://github.com/user-attachments/assets/0d06cdc2-2c1d-42ed-a219-35daf7b0c34c" width="50%" />
 </p>
 
 ![Screenshot 2025-06-04 at 3 17 22 AM](https://github.com/user-attachments/assets/cf5b0c2b-5b84-4478-a1d2-d922bccb8af2)
