@@ -576,27 +576,24 @@ struct ContentView: View {
     
     // Sync both folders
     private func performSync() async throws -> Int {
-        // Create FileManager
         let fileManager = FileManager.default
-        
-        // Destination base directory in iCloud
-        let iCloudBase = "/Users/navaneeth/Library/Mobile Documents/com~apple~CloudDocs"
-        let cloudBoothFolder = "\(iCloudBase)/CloudBooth"
-        
-        // Create the main CloudBooth folder if it doesn't exist
-        if !fileManager.fileExists(atPath: cloudBoothFolder) {
-            try fileManager.createDirectory(atPath: cloudBoothFolder, withIntermediateDirectories: true)
+        guard let destinationURL = FileAccessManager.shared.resolvedDestinationURL() else {
+            throw NSError(domain: "CloudBooth", code: 1, userInfo: [NSLocalizedDescriptionKey: "No iCloud Drive access"]) 
         }
-        
-        // Create tasks to sync both folders in parallel
+        let accessGranted = destinationURL.startAccessingSecurityScopedResource()
+        defer {
+            if accessGranted { destinationURL.stopAccessingSecurityScopedResource() }
+        }
+        let cloudBoothFolderURL = destinationURL.appendingPathComponent("CloudBooth")
+        if !fileManager.fileExists(atPath: cloudBoothFolderURL.path) {
+            try fileManager.createDirectory(at: cloudBoothFolderURL, withIntermediateDirectories: true)
+        }
         async let originalsTask = syncFolder(
-            sourceFolder: "/Users/navaneeth/Pictures/Photo Booth Library/Originals",
-            destFolder: "\(cloudBoothFolder)/Originals",
+            sourceFolder: FileAccessManager.shared.photoBooth(subFolder: "Originals").path,
+            destFolderURL: cloudBoothFolderURL.appendingPathComponent("Originals"),
             updateStats: { stats in
                 await MainActor.run {
                     originals = stats
-                    
-                    // Send progress update to menu bar
                     NotificationCenter.default.post(
                         name: NSNotification.Name("SyncProgress"),
                         object: nil,
@@ -610,15 +607,12 @@ struct ContentView: View {
                 }
             }
         )
-        
         async let picturesTask = syncFolder(
-            sourceFolder: "/Users/navaneeth/Pictures/Photo Booth Library/Pictures",
-            destFolder: "\(cloudBoothFolder)/Pictures",
+            sourceFolder: FileAccessManager.shared.photoBooth(subFolder: "Pictures").path,
+            destFolderURL: cloudBoothFolderURL.appendingPathComponent("Pictures"),
             updateStats: { stats in
                 await MainActor.run {
                     pictures = stats
-                    
-                    // Send progress update to menu bar
                     NotificationCenter.default.post(
                         name: NSNotification.Name("SyncProgress"),
                         object: nil,
@@ -632,68 +626,52 @@ struct ContentView: View {
                 }
             }
         )
-        
-        // Wait for both tasks to complete and get the total number of files copied
         let originalsCount = try await originalsTask
         let picturesCount = try await picturesTask
-        
         return originalsCount + picturesCount
     }
     
     // Sync a single folder
     private func syncFolder(
         sourceFolder: String,
-        destFolder: String,
+        destFolderURL: URL,
         updateStats: @escaping (SyncStats) async -> Void
     ) async throws -> Int {
         let fileManager = FileManager.default
+        guard let destinationURL = FileAccessManager.shared.resolvedDestinationURL() else {
+            throw NSError(domain: "CloudBooth", code: 1, userInfo: [NSLocalizedDescriptionKey: "No iCloud Drive access"]) 
+        }
+        let accessGranted = destinationURL.startAccessingSecurityScopedResource()
+        defer {
+            if accessGranted { destinationURL.stopAccessingSecurityScopedResource() }
+        }
         var stats = SyncStats()
         var filesCopied = 0
-        
-        // Create destination directory if it doesn't exist
-        if !fileManager.fileExists(atPath: destFolder) {
-            try fileManager.createDirectory(atPath: destFolder, withIntermediateDirectories: true)
+        if !fileManager.fileExists(atPath: destFolderURL.path) {
+            try fileManager.createDirectory(at: destFolderURL, withIntermediateDirectories: true)
         }
-        
-        // Get all files in source directory
         let files = try fileManager.contentsOfDirectory(atPath: sourceFolder)
-        
-        // Update the total count
         stats.totalFiles = files.count
         await updateStats(stats)
-        
-        // Copy each file
         for file in files {
-            // Skip .DS_Store and other hidden files
             if file.starts(with: ".") {
                 stats.filesCopied += 1
                 await updateStats(stats)
                 continue
             }
-            
-            let sourceFile = "\(sourceFolder)/\(file)"
-            let destinationFile = "\(destFolder)/\(file)"
-            
-            // Skip if file already exists at destination
-            if fileManager.fileExists(atPath: destinationFile) {
+            let sourceFileURL = URL(fileURLWithPath: sourceFolder).appendingPathComponent(file)
+            let destinationFileURL = destFolderURL.appendingPathComponent(file)
+            if fileManager.fileExists(atPath: destinationFileURL.path) {
                 stats.filesCopied += 1
                 await updateStats(stats)
                 continue
             }
-            
-            // Copy file
-            try fileManager.copyItem(atPath: sourceFile, toPath: destinationFile)
-            
-            // Update progress
+            try fileManager.copyItem(at: sourceFileURL, to: destinationFileURL)
             stats.filesCopied += 1
             filesCopied += 1
-            
             await updateStats(stats)
-            
-            // Small delay to avoid overwhelming the system
-            try await Task.sleep(nanoseconds: 50_000_000) // 0.05 second
+            try await Task.sleep(nanoseconds: 50_000_000)
         }
-        
         return filesCopied
     }
 }

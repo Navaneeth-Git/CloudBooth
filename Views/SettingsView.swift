@@ -101,7 +101,7 @@ struct SettingsView: View {
                                         .fontWeight(.medium)
                                 }
                                 
-                                Text("/Users/navaneeth/Library/Mobile Documents/com~apple~CloudDocs/CloudBooth")
+                                Text(FileAccessManager.shared.iCloudDrive().appendingPathComponent("CloudBooth").path)
                                     .font(.system(.callout, design: .monospaced))
                                     .padding(8)
                                     .frame(maxWidth: .infinity, alignment: .leading)

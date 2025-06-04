@@ -87,10 +87,11 @@ class Settings: ObservableObject {
     
     private var timer: Timer?
     private var fileMonitors: [DispatchSourceFileSystemObject] = []
-    private var monitoredFolders: [String] = [
-        "/Users/navaneeth/Pictures/Photo Booth Library/Pictures",
-        "/Users/navaneeth/Pictures/Photo Booth Library/Originals"
-    ]
+    private var monitoredFolders: [String] {
+        let picturesPath = FileAccessManager.shared.photoBooth(subFolder: "Pictures").path
+        let originalsPath = FileAccessManager.shared.photoBooth(subFolder: "Originals").path
+        return [picturesPath, originalsPath]
+    }
     
     private init() {
         loadSettings()
