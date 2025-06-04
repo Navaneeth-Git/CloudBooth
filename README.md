@@ -1,4 +1,3 @@
-
 # CloudBooth
 
 **CloudBooth** is a lightweight macOS menu bar application that automatically syncs your Photo Booth library to iCloud Drive. This ensures that your photos and videos are safely backed up and accessible across all your Apple devices.
@@ -8,7 +7,7 @@
 - Seamless background syncing of Photo Booth media to iCloud Drive  
 - Minimalist menu bar interface  
 - Built with Swift and SwiftUI  
-- No configuration required—just build and run  
+- No configuration required—just run and let it sync  
 
 ## 🔐 Privacy & Security
 
@@ -27,52 +26,23 @@ Upon first run, macOS will prompt you to grant access to these folders. Please e
 
 ## ⚠️ Important Notice
 
-Due to the absence of a paid Apple Developer account, CloudBooth isn't available on the Mac App Store. Additionally, I cannot distribute a pre-built version of the app here on GitHub either. However, you can build and run the app yourself using Xcode with a free Apple ID. This process is straightforward and doesn't require any payment.
+Since I don’t have an Apple Developer account, I’m unable to sign or notarize the app. Instead, I’ve pulled out the unsigned **debug build** from Xcode for you to use. Because of this, macOS may block the app when you try to open it.
 
-## 🛠️ Build & Run Instructions
+### 🧭 How to Open the Unsigned App
 
-### Prerequisites
+After downloading and unzipping the app from the release:
 
-- A Mac running macOS 12.0 (Monterey) or later  
-- Xcode 13 or later (available for free on the Mac App Store)  
-- A free Apple ID (no paid developer account needed)  
+1. Move the app to your `/Applications` folder (optional but recommended).
+2. Right-click the app and select **Open**.
+3. A warning dialog will appear – click **Open** again.
+4. From then on, you can launch it like any other app.
 
-### Steps
+> You only need to do this once. macOS will remember your choice.
 
-1. **Clone the Repository**
+## 📦 Download
 
-   ```bash
-   git clone https://github.com/Navaneeth-Git/CloudBooth.git
-   cd CloudBooth
-   ```
-
-2. **Open the Project in Xcode**
-
-   ```bash
-   open CloudBooth.xcodeproj
-   ```
-
-3. **Set Up Signing with Your Apple ID**
-
-   - In Xcode, go to **Xcode > Settings > Accounts**  
-   - Click the **+** button and add your Apple ID  
-   - Go back to the project settings:  
-     - Select the **CloudBooth** target  
-     - Navigate to **Signing & Capabilities**  
-     - Under **Team**, select your Apple ID  
-     - Make sure **Automatically manage signing** is enabled  
-
-4. **Build and Run the App**
-
-   - Select your Mac as the target device  
-   - Click the **Run** button (▶️) or press `Cmd + R`  
-   - CloudBooth will launch and appear in your menu bar  
-
-## 📦 Executable Download
-
-If you're looking for a pre-built version (Swift executable) of **CloudBooth**, you can find it in this repository:
-
-👉 [CloudBooth Executable Repository](https://github.com/Navaneeth-Git/CloudBooth-Swift-Executable)
+You can find the latest debug build here:  
+👉 [Releases Page](https://github.com/Navaneeth-Git/CloudBooth/releases)
 
 ## 📸 Screenshots
 
@@ -87,8 +57,6 @@ If you're looking for a pre-built version (Swift executable) of **CloudBooth**, 
   <img src="https://github.com/user-attachments/assets/cf5b0c2b-5b84-4478-a1d2-d922bccb8af2" width="45%" />
   <img src="https://github.com/user-attachments/assets/c6741e38-f8ab-4b92-a221-01b2ecc3c18a" width="45%" />
 </p>
-
-
 
 ## 🧩 How It Works
 
@@ -111,6 +79,7 @@ This project is licensed under the [Apache License 2.0](LICENSE).
 
 ## 🙏 Acknowledgments
 
-Developed by [Navaneeth-Git](https://github.com/Navaneeth-Git).  
-If you find this project helpful, consider starring the repository or contributing!
+Pulled together without code signing by [Navaneeth-Git](https://github.com/Navaneeth-Git).  
+If you find this project helpful, consider starring the repository or contributing!  
 <a href="https://www.flaticon.com/free-icons/synchronize" title="synchronize icons">Synchronize icons created by Tempo_doloe - Flaticon</a>
+"""
