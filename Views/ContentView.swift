@@ -20,6 +20,20 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            // GUARANTEED VISIBLE ATTRIBUTION BANNER
+            HStack {
+                Spacer()
+                Text("App by")
+                    .foregroundColor(.white)
+                Link("Navaneeth", destination: URL(string: "https://github.com/Navaneeth-Git")!)
+                    .foregroundColor(.yellow)
+                    .underline()
+                Spacer()
+            }
+            .padding(.vertical, 6)
+            .background(Color.red)
+            .font(.system(size: 14, weight: .bold))
+            
             headerView
             Divider()
             ScrollView {
@@ -64,7 +78,7 @@ struct ContentView: View {
     private var headerView: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text("CloudBooth")
+                Text("CloudBooth by Navaneeth")
                     .font(.title)
                     .fontWeight(.bold)
                 
@@ -74,6 +88,24 @@ struct ContentView: View {
             }
             
             Spacer()
+            
+            // Visible attribution
+            HStack(spacing: 4) {
+                Text("By")
+                    .font(.caption)
+                    .foregroundColor(.white)
+                Link(destination: URL(string: "https://github.com/Navaneeth-Git")!) {
+                    Text("Navaneeth")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .fontWeight(.semibold)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.blue.opacity(0.7))
+            .cornerRadius(12)
+            .padding(.trailing, 8)
             
             // Subtle upload animation
             Image(systemName: "icloud")
@@ -316,15 +348,25 @@ struct ContentView: View {
             .buttonStyle(.borderless)
             .help("Settings")
 
-            // Info button
+            // Attribution button - EXPLICITLY VISIBLE
             Button(action: {
                 showAttributionSheet = true
             }) {
-                Image(systemName: "info.circle")
-                    .font(.title3)
+                HStack(spacing: 2) {
+                    Text("By")
+                        .font(.caption)
+                    Text("Navaneeth")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.blue.opacity(0.7))
+                .foregroundColor(.white)
+                .cornerRadius(8)
             }
             .buttonStyle(.borderless)
-            .help("About / Attribution")
+            .help("About the developer")
 
             Spacer()
             

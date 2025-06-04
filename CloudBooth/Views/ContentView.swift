@@ -19,6 +19,27 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            // Elegant macOS-styled attribution
+            HStack {
+                Spacer()
+                HStack(spacing: 3) {
+                    Text("Crafted by")
+                        .foregroundColor(.secondary)
+                    Link("Navaneeth", destination: URL(string: "https://github.com/Navaneeth-Git")!)
+                        .foregroundColor(.blue)
+                }
+                .font(.system(size: 12))
+                .padding(.vertical, 4)
+                .padding(.horizontal, 12)
+                .background(
+                    Capsule()
+                        .fill(Color(NSColor.controlBackgroundColor))
+                        .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+                )
+                .padding(.top, 6)
+                .padding(.trailing, 12)
+            }
+            
             // Header
             headerView
             
@@ -62,9 +83,14 @@ struct ContentView: View {
             Task {
                 let hasAccess = await FileAccessManager.shared.ensureDirectoryAccess()
                 if !hasAccess {
-                    await MainActor.run {
-                        showPermissionAlert = true
-                    }
+                    // Reset bookmarks to force a fresh permission request on first launch
+                    FileAccessManager.shared.resetAllBookmarks()
+                    
+                    // Try again immediately with a fresh request
+                    _ = await FileAccessManager.shared.ensureDirectoryAccess()
+                    
+                    // Even if it fails the second time, don't show alert on launch
+                    // The alert will show when they try to sync
                 }
             }
             setupNotificationObservers()
@@ -156,7 +182,17 @@ struct ContentView: View {
                     }
                     
                     if !record.success, let error = record.errorMessage {
-                        Text(error)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                            
+                            if error.localizedCaseInsensitiveContains("permission") || error.localizedCaseInsensitiveContains("denied") || error.localizedCaseInsensitiveContains("access") {
+                                Text("Click 'Sync Now' again to grant permissions")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                            }
+                        }
                             .font(.caption)
                             .foregroundStyle(.red)
                             .padding(6)
@@ -440,27 +476,37 @@ struct ContentView: View {
             // First check for permissions
             let hasAccess = await FileAccessManager.shared.ensureDirectoryAccess()
             if !hasAccess {
-                await MainActor.run {
-                    showPermissionAlert = true
-                    
-                    if isAutoSync {
-                        let record = SyncRecord(
-                            date: Date(),
-                            filesTransferred: 0,
-                            success: false,
-                            errorMessage: "Permission denied"
+                // Reset bookmarks to force a fresh permission request
+                FileAccessManager.shared.resetAllBookmarks()
+                
+                // Try again immediately to get permissions with a fresh request
+                let retryAccess = await FileAccessManager.shared.ensureDirectoryAccess()
+                
+                if !retryAccess {
+                    // Only if the second attempt fails, show alert and record failure
+                    await MainActor.run {
+                        showPermissionAlert = true
+                        
+                        if isAutoSync {
+                            let record = SyncRecord(
+                                date: Date(),
+                                filesTransferred: 0,
+                                success: false,
+                                errorMessage: "Permission denied. Click 'Sync Now' to grant access."
+                            )
+                            settings.addSyncRecord(record)
+                        }
+                        
+                        // Notify menu bar app of sync failure
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("SyncFailed"),
+                            object: nil,
+                            userInfo: ["errorMessage": "Permission denied. Click 'Sync Now' to grant access."]
                         )
-                        settings.addSyncRecord(record)
                     }
-                    
-                    // Notify menu bar app of sync failure
-                    NotificationCenter.default.post(
-                        name: NSNotification.Name("SyncFailed"),
-                        object: nil,
-                        userInfo: ["errorMessage": "Permission denied"]
-                    )
+                    return
                 }
-                return
+                // If we got here, permission was granted on second attempt, continue with sync
             }
             
             await MainActor.run {
@@ -509,13 +555,14 @@ struct ContentView: View {
                     statusMessage = "Sync failed"
                     if error.localizedDescription.localizedCaseInsensitiveContains("permission") || error.localizedDescription.localizedCaseInsensitiveContains("denied") {
                         FileAccessManager.shared.resetAllBookmarks()
-                        statusMessage = "Permissions were reset. Please try syncing again and grant access when prompted."
+                        statusMessage = "Permissions needed. Click 'Sync Now' again to grant access."
                     }
                     let record = SyncRecord(
                         date: Date(),
                         filesTransferred: originals.filesCopied + pictures.filesCopied,
                         success: false,
-                        errorMessage: error.localizedDescription
+                        errorMessage: error.localizedDescription.localizedCaseInsensitiveContains("permission") || error.localizedDescription.localizedCaseInsensitiveContains("denied") ? 
+                                     "Permissions needed. Click 'Sync Now' to grant access." : error.localizedDescription
                     )
                     settings.addSyncRecord(record)
                     isLoading = false
