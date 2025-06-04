@@ -6,9 +6,7 @@ import Combine
 class MenuBarController: ObservableObject {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
-    private var popoverMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
-    private var eventMonitor: Any?
     
     // Track if we're active to prevent deallocation
     static let shared = MenuBarController()
@@ -22,82 +20,20 @@ class MenuBarController: ObservableObject {
         DispatchQueue.main.async {
             _ = Self.shared
         }
-        
-        // Set up a periodic check to ensure the status item persists
-        Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
-            self?.ensureStatusItemExists()
-        }
-        
-        // Monitor workspace notifications to handle screen changes
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(screenParametersChanged),
-            name: NSApplication.didChangeScreenParametersNotification,
-            object: nil
-        )
     }
     
     deinit {
         NotificationCenter.default.removeObserver(self)
-        
-        // Clean up monitors
-        if let monitor = eventMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
-        
-        if let monitor = popoverMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
-    }
-    
-    // Handle screen configuration changes
-    @objc private func screenParametersChanged() {
-        // If popover is shown when screens change, close it to prevent display issues
-        if let popover = popover, popover.isShown {
-            popover.close()
-            isPopoverShown = false
-        }
-        
-        // Recreate status item to ensure it's on the right screen
-        ensureStatusItemExists()
-    }
-    
-    // Make sure our status item exists and is visible
-    private func ensureStatusItemExists() {
-        DispatchQueue.main.async {
-            if self.statusItem == nil {
-                self.setupStatusItem()
-            } else if self.statusItem?.button?.superview == nil {
-                // Status item exists but button isn't in view hierarchy - recreate
-                self.setupStatusItem()
-            }
-        }
     }
     
     private func setupStatusItem() {
-        // Remove existing item to prevent duplicates
-        if let existingItem = statusItem {
-            NSStatusBar.system.removeStatusItem(existingItem)
-        }
-        
-        // Create a new status item with fixed width for stability
-        // Use a slightly larger width for better visibility
-        statusItem = NSStatusBar.system.statusItem(withLength: 30.0)
+        // Ensure we have a persistent status item that won't disappear
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
             button.image = NSImage(systemSymbolName: "icloud", accessibilityDescription: "CloudBooth")
-            button.image?.size = NSSize(width: 18, height: 18)
             button.action = #selector(togglePopover)
             button.target = self
-            
-            // Ensure the button has proper appearance
-            button.imagePosition = .imageOnly
-            button.imageScaling = .scaleProportionallyDown
-            
-            // Add a more visible border for better identification
-            button.wantsLayer = true
-            button.layer?.cornerRadius = 4
-            button.layer?.masksToBounds = true
         }
         
         // Set notification observer to ensure we respond to app activation
@@ -111,126 +47,29 @@ class MenuBarController: ObservableObject {
     
     @objc private func applicationDidBecomeActive() {
         // Ensure our status item is visible when app becomes active
-        ensureStatusItemExists()
+        if statusItem == nil {
+            setupStatusItem()
+        }
     }
     
     @objc private func togglePopover() {
-        // First check if popover is already showing
-        if let currentPopover = popover, currentPopover.isShown {
-            currentPopover.close()
-            isPopoverShown = false
-            
-            // Reset button appearance
-            if let button = statusItem?.button, button.wantsLayer {
-                button.layer?.backgroundColor = nil
-            }
-            
-            // Clean up monitor
-            if let monitor = popoverMonitor {
-                NSEvent.removeMonitor(monitor)
-                popoverMonitor = nil
-            }
-            
-            return
+        if popover == nil {
+            popover = NSPopover()
+            popover?.contentSize = NSSize(width: 320, height: 280)
+            popover?.behavior = .transient
+            popover?.contentViewController = NSHostingController(rootView: MenuBarView().environmentObject(Settings.shared))
         }
-        
-        // Clean up any existing monitors
-        if let monitor = popoverMonitor {
-            NSEvent.removeMonitor(monitor)
-            popoverMonitor = nil
-        }
-        
-        // Create a fresh popover each time to avoid stale references
-        popover = NSPopover()
-        popover?.contentSize = NSSize(width: 320, height: 320)
-        // Use applicationDefined behavior for better control
-        popover?.behavior = .applicationDefined
-        popover?.contentViewController = NSHostingController(rootView: MenuBarView().environmentObject(Settings.shared))
         
         if let popover = popover, let button = statusItem?.button {
-            // Get the screen that contains the menubar icon
-            let buttonWindow = button.window
-            let buttonFrame = button.convert(button.bounds, to: nil)
-            let buttonScreenPoint = buttonWindow?.convertPoint(toScreen: buttonFrame.origin) ?? .zero
-            let menuBarScreen = NSScreen.screens.first { screen in
-                NSMouseInRect(buttonScreenPoint, screen.frame, false)
-            } ?? NSScreen.main
-            
-            // Mark the status item visually active
-            if button.wantsLayer {
-                button.layer?.backgroundColor = NSColor.selectedMenuItemColor.withAlphaComponent(0.2).cgColor
-            }
-            
-            // Calculate appropriate position
-            NSApp.activate(ignoringOtherApps: true)
-            
-            // Force the popover to position correctly
-            DispatchQueue.main.async {
-                // Create our own event monitor for better click detection
-                self.popoverMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-                    guard let self = self, let popover = self.popover, popover.isShown else { return }
-                    
-                    // Get the click location in screen coordinates
-                    let clickLocation = event.locationInWindow
-                    let clickScreenPoint = event.window?.convertPoint(toScreen: clickLocation) ?? clickLocation
-                    
-                    // Check if click is outside popover
-                    if let popoverWindow = popover.contentViewController?.view.window {
-                        let popoverFrame = popoverWindow.frame
-                        if !NSMouseInRect(clickScreenPoint, popoverFrame, false) {
-                            // Click outside popover - close it
-                            popover.close()
-                            self.isPopoverShown = false
-                            
-                            // Reset button appearance
-                            if let button = self.statusItem?.button, button.wantsLayer {
-                                button.layer?.backgroundColor = nil
-                            }
-                        }
-                    }
-                }
-                
-                // Show the popover at the correct position
+            if popover.isShown {
+                popover.close()
+                isPopoverShown = false
+            } else {
                 popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+                isPopoverShown = true
                 
-                // Ensure our popover is positioned on the correct screen
-                if let popoverWindow = popover.contentViewController?.view.window {
-                    popoverWindow.level = .statusBar
-                    
-                    // Position correction for multi-monitor setups
-                    if let menuBarScreen = menuBarScreen {
-                        // Ensure popover is on the same screen as the menu bar icon
-                        let currentFrame = popoverWindow.frame
-                        let screenFrame = menuBarScreen.frame
-                        
-                        // Check if popover is partially outside the current screen
-                        if !NSContainsRect(screenFrame, currentFrame) {
-                            // Adjust position to keep within screen bounds
-                            var adjustedFrame = currentFrame
-                            
-                            // Adjust X coordinate to stay within screen
-                            if NSMaxX(currentFrame) > NSMaxX(screenFrame) {
-                                adjustedFrame.origin.x = NSMaxX(screenFrame) - currentFrame.size.width
-                            }
-                            if currentFrame.origin.x < screenFrame.origin.x {
-                                adjustedFrame.origin.x = screenFrame.origin.x
-                            }
-                            
-                            // Adjust Y coordinate to stay within screen
-                            if NSMaxY(currentFrame) > NSMaxY(screenFrame) {
-                                adjustedFrame.origin.y = NSMaxY(screenFrame) - currentFrame.size.height
-                            }
-                            if currentFrame.origin.y < screenFrame.origin.y {
-                                adjustedFrame.origin.y = screenFrame.origin.y
-                            }
-                            
-                            // Apply adjusted frame
-                            popoverWindow.setFrame(adjustedFrame, display: true)
-                        }
-                    }
-                }
-                
-                self.isPopoverShown = true
+                // Close when clicking outside
+                NSApp.activate(ignoringOtherApps: true)
             }
         }
     }
@@ -242,9 +81,6 @@ class MenuBarController: ObservableObject {
                 systemSymbolName: isLoading ? "arrow.triangle.2.circlepath" : "icloud",
                 accessibilityDescription: "CloudBooth"
             )
-            
-            // Ensure proper size for consistency
-            button.image?.size = NSSize(width: 18, height: 18)
         } else {
             // Recreate status item if it disappeared
             setupStatusItem()
@@ -333,8 +169,14 @@ struct MenuBarView: View {
                 .onAppear {
                     if isLoading { animateUpload = true }
                 }
-                .onChange(of: isLoading) { newValue in
-                    animateUpload = newValue
+                .onChange(of: isLoading) { _, newValue in
+                    if newValue {
+                        withAnimation(.easeInOut(duration: 0.7).repeatForever()) {
+                            animateUpload.toggle()
+                        }
+                    } else {
+                        animateUpload = false
+                    }
                 }
                 Text("CloudBooth")
                     .font(.headline)

@@ -32,6 +32,10 @@ struct CloudBoothApp: App {
     @State private var showSettingsWindow = false
     @State private var showHistoryWindow = false
     
+    // Window controllers
+    private let settingsWindowController = NSWindowController()
+    private let historyWindowController = NSWindowController()
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -41,6 +45,8 @@ struct CloudBoothApp: App {
                 .alwaysOnTop()
                 .onAppear {
                     setupNotificationObservers()
+                    // Initialize window controllers
+                    setupWindowControllers()
                     // Ensure the main window stays in front
                     if let window = NSApplication.shared.windows.first {
                         window.level = .floating
@@ -89,38 +95,78 @@ struct CloudBoothApp: App {
                 }
             }
         }
-        .onChange(of: showSettingsWindow) { _, _ in
-            if showSettingsWindow {
-                Task { @MainActor in
-                    openWindow(
-                        title: "CloudBooth Settings",
-                        width: 500, 
-                        height: 460,
-                        content: { SettingsView().environmentObject(settings).alwaysOnTop() }
-                    ) {
-                        Task { @MainActor in
-                            showSettingsWindow = false
-                        }
-                    }
-                }
+        .onChange(of: showSettingsWindow) { _, newValue in
+            if newValue {
+                openSettingsWindow()
+                showSettingsWindow = false
             }
         }
-        .onChange(of: showHistoryWindow) { _, _ in
-            if showHistoryWindow {
-                Task { @MainActor in
-                    openWindow(
-                        title: "Sync History",
-                        width: 520, 
-                        height: 500,
-                        content: { HistoryView().environmentObject(settings).alwaysOnTop() }
-                    ) {
-                        Task { @MainActor in
-                            showHistoryWindow = false
-                        }
-                    }
-                }
+        .onChange(of: showHistoryWindow) { _, newValue in
+            if newValue {
+                openHistoryWindow()
+                showHistoryWindow = false
             }
         }
+    }
+    
+    // Setup window controllers
+    private func setupWindowControllers() {
+        // Settings window
+        let settingsWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 460),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        settingsWindow.title = "CloudBooth Settings"
+        settingsWindow.center()
+        settingsWindow.isRestorable = false
+        settingsWindow.contentView = NSHostingView(rootView: 
+            SettingsView().environmentObject(settings).alwaysOnTop()
+        )
+        settingsWindow.level = .floating
+        
+        // History window
+        let historyWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 500),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        historyWindow.title = "Sync History"
+        historyWindow.center()
+        historyWindow.isRestorable = false
+        historyWindow.contentView = NSHostingView(rootView: 
+            HistoryView().environmentObject(settings).alwaysOnTop()
+        )
+        historyWindow.level = .floating
+        
+        // Set window controllers
+        if let settingsController = NSWindowController(window: settingsWindow) as? NSWindowController {
+            settingsWindowController.window = settingsWindow
+        }
+        
+        if let historyController = NSWindowController(window: historyWindow) as? NSWindowController {
+            historyWindowController.window = historyWindow
+        }
+    }
+    
+    // Open settings window
+    private func openSettingsWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        if settingsWindowController.window == nil {
+            setupWindowControllers()
+        }
+        settingsWindowController.showWindow(nil)
+    }
+    
+    // Open history window
+    private func openHistoryWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        if historyWindowController.window == nil {
+            setupWindowControllers()
+        }
+        historyWindowController.showWindow(nil)
     }
     
     func openWindow<Content: View>(

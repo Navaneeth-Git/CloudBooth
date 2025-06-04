@@ -16,30 +16,10 @@ struct ContentView: View {
     @State private var showHistorySheet = false
     @State private var animateSync = false
     @State private var animateUpload = false
+    @State private var showAttributionSheet = false
     
     var body: some View {
         VStack(spacing: 0) {
-            // Elegant macOS-styled attribution
-            HStack {
-                Spacer()
-                HStack(spacing: 3) {
-                    Text("Crafted by")
-                        .foregroundColor(.secondary)
-                    Link("Navaneeth", destination: URL(string: "https://github.com/Navaneeth-Git")!)
-                        .foregroundColor(.blue)
-                }
-                .font(.system(size: 12))
-                .padding(.vertical, 4)
-                .padding(.horizontal, 12)
-                .background(
-                    Capsule()
-                        .fill(Color(NSColor.controlBackgroundColor))
-                        .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
-                )
-                .padding(.top, 6)
-                .padding(.trailing, 12)
-            }
-            
             // Header
             headerView
             
@@ -69,9 +49,12 @@ struct ContentView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .frame(width: 480, height: 600)
         .alert("Permission Required", isPresented: $showPermissionAlert) {
+            Button("Retry") {
+                resetAndCheckPermissions()
+            }
             Button("OK", role: .cancel) { }
         } message: {
-            Text("CloudBooth needs access to your Photo Booth and iCloud Drive folders. Please grant access when prompted.")
+            Text("CloudBooth needs access to your Photo Booth and iCloud Drive folders. Please grant access when prompted. If you've already granted permission, click Retry.")
         }
         .sheet(isPresented: $showSettingsSheet) {
             SettingsView()
@@ -79,20 +62,11 @@ struct ContentView: View {
         .sheet(isPresented: $showHistorySheet) {
             HistoryView()
         }
+        .sheet(isPresented: $showAttributionSheet) {
+            AttributionView()
+        }
         .onAppear {
-            Task {
-                let hasAccess = await FileAccessManager.shared.ensureDirectoryAccess()
-                if !hasAccess {
-                    // Reset bookmarks to force a fresh permission request on first launch
-                    FileAccessManager.shared.resetAllBookmarks()
-                    
-                    // Try again immediately with a fresh request
-                    _ = await FileAccessManager.shared.ensureDirectoryAccess()
-                    
-                    // Even if it fails the second time, don't show alert on launch
-                    // The alert will show when they try to sync
-                }
-            }
+            checkPermissions()
             setupNotificationObservers()
         }
         .onDisappear {
@@ -116,6 +90,24 @@ struct ContentView: View {
             
             Spacer()
             
+            // Visible attribution
+            HStack(spacing: 4) {
+                Text("By")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Link(destination: URL(string: "https://github.com/Navaneeth-Git")!) {
+                    Text("Navaneeth")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .fontWeight(.semibold)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color(nsColor: .controlBackgroundColor))
+            .cornerRadius(12)
+            .padding(.trailing, 8)
+            
             // Subtle upload animation
             Image(systemName: "icloud")
                 .font(.title)
@@ -126,8 +118,8 @@ struct ContentView: View {
                 .onAppear {
                     if isLoading { animateUpload = true }
                 }
-                .onChange(of: isLoading) { _, _ in
-                    animateUpload = isLoading
+                .onChange(of: isLoading) { _, newValue in
+                    animateUpload = newValue
                 }
         }
         .padding()
@@ -182,17 +174,7 @@ struct ContentView: View {
                     }
                     
                     if !record.success, let error = record.errorMessage {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(error)
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                            
-                            if error.localizedCaseInsensitiveContains("permission") || error.localizedCaseInsensitiveContains("denied") || error.localizedCaseInsensitiveContains("access") {
-                                Text("Click 'Sync Now' again to grant permissions")
-                                    .font(.caption)
-                                    .foregroundStyle(.orange)
-                            }
-                        }
+                        Text(error)
                             .font(.caption)
                             .foregroundStyle(.red)
                             .padding(6)
@@ -271,14 +253,14 @@ struct ContentView: View {
                 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Image(systemName: "folder.badge.gearshape")
+                        Image(systemName: settings.useCustomDestination ? "folder.badge.gearshape" : "icloud")
                             .foregroundStyle(.blue)
                         Text("Destination")
                             .font(.subheadline)
                             .fontWeight(.medium)
                     }
                     
-                    Text("iCloud Drive")
+                    Text(settings.useCustomDestination ? "Custom Location" : "iCloud Drive")
                         .font(.caption)
                     
                     Text("CloudBooth folder")
@@ -357,6 +339,18 @@ struct ContentView: View {
             .buttonStyle(.borderless)
             .help("View Sync History")
             
+            // Debug button (TEMPORARY)
+            Button(action: {
+                Task {
+                    await debugICloudAccess()
+                }
+            }) {
+                Image(systemName: "ladybug")
+                    .font(.title3)
+            }
+            .buttonStyle(.borderless)
+            .help("Debug iCloud Access")
+            
             // Settings button
             Button(action: {
                 showSettingsSheet = true
@@ -408,6 +402,34 @@ struct ContentView: View {
     
     // MARK: - App Logic
     
+    // Request access permissions
+    private func checkPermissions() {
+        Task {
+            let hasAccess = await FileAccessManager.shared.ensureDirectoryAccess()
+            
+            if !hasAccess {
+                await MainActor.run {
+                    showPermissionAlert = true
+                }
+            } else {
+                print("✅ All permissions granted successfully")
+                // If permissions are granted, reset the alert state
+                await MainActor.run {
+                    showPermissionAlert = false
+                }
+            }
+        }
+    }
+    
+    // Reset permissions and check again
+    private func resetAndCheckPermissions() {
+        Task {
+            FileAccessManager.shared.resetAllBookmarks()
+            await Task.yield()
+            checkPermissions()
+        }
+    }
+    
     // Set up notification observers for menu commands and auto-sync
     private func setupNotificationObservers() {
         // Manual sync from menu
@@ -427,7 +449,6 @@ struct ContentView: View {
             object: nil,
             queue: .main
         ) { _ in
-            print("[AutoSync] Received AutoSyncRequested notification. Triggering syncPhotos(isAutoSync: true)")
             Task { @MainActor in
                 if !isLoading {
                     syncPhotos(isAutoSync: true)
@@ -444,7 +465,7 @@ struct ContentView: View {
             queue: .main
         ) { _ in
             Task { @MainActor in
-
+                checkPermissions()
             }
         }
     }
@@ -476,37 +497,27 @@ struct ContentView: View {
             // First check for permissions
             let hasAccess = await FileAccessManager.shared.ensureDirectoryAccess()
             if !hasAccess {
-                // Reset bookmarks to force a fresh permission request
-                FileAccessManager.shared.resetAllBookmarks()
-                
-                // Try again immediately to get permissions with a fresh request
-                let retryAccess = await FileAccessManager.shared.ensureDirectoryAccess()
-                
-                if !retryAccess {
-                    // Only if the second attempt fails, show alert and record failure
-                    await MainActor.run {
-                        showPermissionAlert = true
-                        
-                        if isAutoSync {
-                            let record = SyncRecord(
-                                date: Date(),
-                                filesTransferred: 0,
-                                success: false,
-                                errorMessage: "Permission denied. Click 'Sync Now' to grant access."
-                            )
-                            settings.addSyncRecord(record)
-                        }
-                        
-                        // Notify menu bar app of sync failure
-                        NotificationCenter.default.post(
-                            name: NSNotification.Name("SyncFailed"),
-                            object: nil,
-                            userInfo: ["errorMessage": "Permission denied. Click 'Sync Now' to grant access."]
+                await MainActor.run {
+                    showPermissionAlert = true
+                    
+                    if isAutoSync {
+                        let record = SyncRecord(
+                            date: Date(),
+                            filesTransferred: 0,
+                            success: false,
+                            errorMessage: "Permission denied"
                         )
+                        settings.addSyncRecord(record)
                     }
-                    return
+                    
+                    // Notify menu bar app of sync failure
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("SyncFailed"),
+                        object: nil,
+                        userInfo: ["errorMessage": "Permission denied"]
+                    )
                 }
-                // If we got here, permission was granted on second attempt, continue with sync
+                return
             }
             
             await MainActor.run {
@@ -553,19 +564,18 @@ struct ContentView: View {
             } catch {
                 await MainActor.run {
                     statusMessage = "Sync failed"
-                    if error.localizedDescription.localizedCaseInsensitiveContains("permission") || error.localizedDescription.localizedCaseInsensitiveContains("denied") {
-                        FileAccessManager.shared.resetAllBookmarks()
-                        statusMessage = "Permissions needed. Click 'Sync Now' again to grant access."
-                    }
+                    
                     let record = SyncRecord(
                         date: Date(),
                         filesTransferred: originals.filesCopied + pictures.filesCopied,
                         success: false,
-                        errorMessage: error.localizedDescription.localizedCaseInsensitiveContains("permission") || error.localizedDescription.localizedCaseInsensitiveContains("denied") ? 
-                                     "Permissions needed. Click 'Sync Now' to grant access." : error.localizedDescription
+                        errorMessage: error.localizedDescription
                     )
                     settings.addSyncRecord(record)
+                    
                     isLoading = false
+                    
+                    // Notify menu bar app that sync failed
                     NotificationCenter.default.post(
                         name: NSNotification.Name("SyncFailed"),
                         object: nil,
@@ -580,24 +590,125 @@ struct ContentView: View {
     
     // Sync both folders
     private func performSync() async throws -> Int {
+        // Create FileManager
         let fileManager = FileManager.default
-        guard let destinationURL = FileAccessManager.shared.resolvedDestinationURL() else {
-            throw NSError(domain: "CloudBooth", code: 1, userInfo: [NSLocalizedDescriptionKey: "No iCloud Drive access"]) 
+        
+        // Get base destination directory (either iCloud or custom location)
+        let destinationBase: String
+        if settings.useCustomDestination, let customPath = settings.customDestinationPath {
+            destinationBase = customPath
+        } else {
+            // First try to use security-scoped bookmark if available
+            if let bookmarkData = UserDefaults.standard.data(forKey: "iCloudBookmarkData") {
+                do {
+                    var isStale = false
+                    let url = try URL(resolvingBookmarkData: bookmarkData, 
+                                      options: [.withSecurityScope], 
+                                      relativeTo: nil, 
+                                      bookmarkDataIsStale: &isStale)
+                    
+                    // Start accessing the security-scoped resource
+                    if url.startAccessingSecurityScopedResource() {
+                        print("🔍 Using security-scoped bookmarked iCloud path for sync: \(url.path)")
+                        destinationBase = url.path
+                        defer { url.stopAccessingSecurityScopedResource() }
+                    } else {
+                        // Fall back to direct path
+                        let directiCloudURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs")
+                        destinationBase = directiCloudURL.path
+                    }
+                } catch {
+                    print("❌ Failed to use iCloud bookmark for sync: \(error.localizedDescription)")
+                    // Fall back to direct path
+                    let directiCloudURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs")
+                    destinationBase = directiCloudURL.path
+                }
+            } else {
+                // Direct path to iCloud Drive
+                let directiCloudURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs")
+                destinationBase = directiCloudURL.path
+            }
         }
-        let accessGranted = destinationURL.startAccessingSecurityScopedResource()
-        defer {
-            if accessGranted { destinationURL.stopAccessingSecurityScopedResource() }
+        
+        print("📂 Destination base path: \(destinationBase)")
+        
+        // Verify the destination base path exists and is accessible
+        var isDirectory: ObjCBool = false
+        if !fileManager.fileExists(atPath: destinationBase, isDirectory: &isDirectory) || !isDirectory.boolValue {
+            print("❌ Destination base path doesn't exist or isn't a directory")
+            throw NSError(domain: "CloudBoothError", code: 1002, userInfo: [
+                NSLocalizedDescriptionKey: "iCloud Drive location is invalid: \(destinationBase)"
+            ])
         }
-        let cloudBoothFolderURL = destinationURL.appendingPathComponent("CloudBooth")
-        if !fileManager.fileExists(atPath: cloudBoothFolderURL.path) {
-            try fileManager.createDirectory(at: cloudBoothFolderURL, withIntermediateDirectories: true)
+        
+        let cloudBoothFolder = "\(destinationBase)/CloudBooth"
+        
+        print("📂 Syncing to: \(cloudBoothFolder)")
+        
+        // Create the main CloudBooth folder if it doesn't exist
+        if !fileManager.fileExists(atPath: cloudBoothFolder) {
+            do {
+                print("📁 Creating CloudBooth folder at \(cloudBoothFolder)")
+                try fileManager.createDirectory(atPath: cloudBoothFolder, withIntermediateDirectories: true, attributes: nil)
+                print("✅ Created successfully")
+                
+                // Verify folder was created
+                if !fileManager.fileExists(atPath: cloudBoothFolder) {
+                    print("⚠️ Folder appears not to exist after creation")
+                    throw NSError(domain: "CloudBoothError", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Failed to create CloudBooth folder: Folder doesn't exist after creation"])
+                }
+            } catch {
+                print("❌ Error creating CloudBooth folder: \(error.localizedDescription)")
+                throw error
+            }
+        } else {
+            print("✅ CloudBooth folder already exists")
+            
+            // Verify we have access to it
+            do {
+                let _ = try fileManager.contentsOfDirectory(atPath: cloudBoothFolder)
+                print("✅ Successfully accessed CloudBooth folder")
+            } catch {
+                print("❌ Cannot access CloudBooth folder: \(error.localizedDescription)")
+                throw error
+            }
         }
+        
+        // Verify/create Originals and Pictures folders
+        let originalsFolder = "\(cloudBoothFolder)/Originals"
+        let picturesFolder = "\(cloudBoothFolder)/Pictures"
+        
+        // Create Originals folder if needed
+        if !fileManager.fileExists(atPath: originalsFolder) {
+            do {
+                print("📁 Creating Originals folder")
+                try fileManager.createDirectory(atPath: originalsFolder, withIntermediateDirectories: true)
+            } catch {
+                print("❌ Error creating Originals folder: \(error.localizedDescription)")
+                throw error
+            }
+        }
+        
+        // Create Pictures folder if needed
+        if !fileManager.fileExists(atPath: picturesFolder) {
+            do {
+                print("📁 Creating Pictures folder")
+                try fileManager.createDirectory(atPath: picturesFolder, withIntermediateDirectories: true)
+            } catch {
+                print("❌ Error creating Pictures folder: \(error.localizedDescription)")
+                throw error
+            }
+        }
+        
+        // Create tasks to sync both folders in parallel
         async let originalsTask = syncFolder(
-            sourceFolder: "/Users/navaneeth/Pictures/Photo Booth Library/Originals",
-            destFolderURL: cloudBoothFolderURL.appendingPathComponent("Originals"),
+            sourceFolder: FileAccessManager.shared.photoBooth(subFolder: "Originals").path,
+            destFolder: "\(cloudBoothFolder)/Originals",
             updateStats: { stats in
                 await MainActor.run {
                     originals = stats
+                    
+                    // Send progress update to menu bar
                     NotificationCenter.default.post(
                         name: NSNotification.Name("SyncProgress"),
                         object: nil,
@@ -611,12 +722,15 @@ struct ContentView: View {
                 }
             }
         )
+        
         async let picturesTask = syncFolder(
-            sourceFolder: "/Users/navaneeth/Pictures/Photo Booth Library/Pictures",
-            destFolderURL: cloudBoothFolderURL.appendingPathComponent("Pictures"),
+            sourceFolder: FileAccessManager.shared.photoBooth(subFolder: "Pictures").path,
+            destFolder: "\(cloudBoothFolder)/Pictures",
             updateStats: { stats in
                 await MainActor.run {
                     pictures = stats
+                    
+                    // Send progress update to menu bar
                     NotificationCenter.default.post(
                         name: NSNotification.Name("SyncProgress"),
                         object: nil,
@@ -630,53 +744,160 @@ struct ContentView: View {
                 }
             }
         )
+        
+        // Wait for both tasks to complete and get the total number of files copied
         let originalsCount = try await originalsTask
         let picturesCount = try await picturesTask
+        
         return originalsCount + picturesCount
     }
     
     // Sync a single folder
     private func syncFolder(
         sourceFolder: String,
-        destFolderURL: URL,
+        destFolder: String,
         updateStats: @escaping (SyncStats) async -> Void
     ) async throws -> Int {
         let fileManager = FileManager.default
-        guard let destinationURL = FileAccessManager.shared.resolvedDestinationURL() else {
-            throw NSError(domain: "CloudBooth", code: 1, userInfo: [NSLocalizedDescriptionKey: "No iCloud Drive access"]) 
-        }
-        let accessGranted = destinationURL.startAccessingSecurityScopedResource()
-        defer {
-            if accessGranted { destinationURL.stopAccessingSecurityScopedResource() }
-        }
         var stats = SyncStats()
         var filesCopied = 0
-        if !fileManager.fileExists(atPath: destFolderURL.path) {
-            try fileManager.createDirectory(at: destFolderURL, withIntermediateDirectories: true)
+        
+        // Create destination directory if it doesn't exist
+        if !fileManager.fileExists(atPath: destFolder) {
+            try fileManager.createDirectory(atPath: destFolder, withIntermediateDirectories: true)
         }
+        
+        // Get all files in source directory
         let files = try fileManager.contentsOfDirectory(atPath: sourceFolder)
+        
+        // Update the total count
         stats.totalFiles = files.count
         await updateStats(stats)
+        
+        // Copy each file
         for file in files {
+            // Skip .DS_Store and other hidden files
             if file.starts(with: ".") {
                 stats.filesCopied += 1
                 await updateStats(stats)
                 continue
             }
-            let sourceFileURL = URL(fileURLWithPath: sourceFolder).appendingPathComponent(file)
-            let destinationFileURL = destFolderURL.appendingPathComponent(file)
-            if fileManager.fileExists(atPath: destinationFileURL.path) {
+            
+            let sourceFile = "\(sourceFolder)/\(file)"
+            let destinationFile = "\(destFolder)/\(file)"
+            
+            // Skip if file already exists at destination
+            if fileManager.fileExists(atPath: destinationFile) {
                 stats.filesCopied += 1
                 await updateStats(stats)
                 continue
             }
-            try fileManager.copyItem(at: sourceFileURL, to: destinationFileURL)
+            
+            // Copy file
+            try fileManager.copyItem(atPath: sourceFile, toPath: destinationFile)
+            
+            // Update progress
             stats.filesCopied += 1
             filesCopied += 1
+            
             await updateStats(stats)
-            try await Task.sleep(nanoseconds: 50_000_000)
+            
+            // Small delay to avoid overwhelming the system
+            try await Task.sleep(nanoseconds: 50_000_000) // 0.05 second
         }
+        
         return filesCopied
+    }
+    
+    // Debug function to test iCloud access
+    private func debugICloudAccess() async {
+        // Update status to indicate we're debugging
+        await MainActor.run {
+            statusMessage = "Testing iCloud access..."
+        }
+        
+        // Check for security-scoped bookmark
+        let hasBookmark = UserDefaults.standard.data(forKey: "iCloudBookmarkData") != nil
+        var bookmarkPath = "None"
+        
+        if hasBookmark {
+            if let bookmarkData = UserDefaults.standard.data(forKey: "iCloudBookmarkData") {
+                do {
+                    var isStale = false
+                    let url = try URL(resolvingBookmarkData: bookmarkData, 
+                                      options: [.withSecurityScope], 
+                                      relativeTo: nil, 
+                                      bookmarkDataIsStale: &isStale)
+                    
+                    bookmarkPath = url.path
+                } catch {
+                    bookmarkPath = "Error: \(error.localizedDescription)"
+                }
+            }
+        }
+        
+        // Get the direct iCloud path
+        let directiCloudURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs")
+        
+        // Also get the sandbox container path for comparison
+        let containerPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        let containerICloudPath: String
+        if let containerURL = containerPath?.deletingLastPathComponent().appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs") {
+            containerICloudPath = containerURL.path
+        } else {
+            containerICloudPath = "Not available"
+        }
+        
+        // Compose a user-friendly message
+        let debugMessage = """
+        Direct iCloud Path:
+        \(directiCloudURL.path)
+        
+        Security-scoped bookmark available: \(hasBookmark)
+        Bookmark path: \(bookmarkPath)
+        
+        Container iCloud path (for reference):
+        \(containerICloudPath)
+        
+        The app will now use the direct iCloud path.
+        """
+        
+        await MainActor.run {
+            statusMessage = debugMessage
+            print(debugMessage)
+        }
+        
+        // Check if iCloud Drive is available using direct path
+        var directPathAccessible = false
+        do {
+            let _ = try FileManager.default.contentsOfDirectory(at: directiCloudURL, includingPropertiesForKeys: nil)
+            directPathAccessible = true
+        } catch {
+            print("❌ Cannot access direct iCloud path: \(error.localizedDescription)")
+        }
+        
+        await MainActor.run {
+            statusMessage += "\n\nDirect iCloud path accessible: \(directPathAccessible)"
+        }
+        
+        // Get the destination path for saving files
+        let destinationPath = settings.getDestinationBasePath()
+        
+        await MainActor.run {
+            statusMessage += "\n\nSaving files to: \(destinationPath)"
+        }
+        
+        // Check CloudBooth folder
+        let cloudBoothFolder = "\(destinationPath)/CloudBooth"
+        let cloudBoothExists = FileManager.default.fileExists(atPath: cloudBoothFolder)
+        
+        await MainActor.run {
+            statusMessage += "\nCloudBooth folder exists: \(cloudBoothExists)"
+            
+            // Test the photo booth path as well
+            let photoBoothOriginals = FileAccessManager.shared.photoBooth(subFolder: "Originals").path
+            statusMessage += "\nPhoto Booth Originals: \(photoBoothOriginals)"
+        }
     }
 }
 

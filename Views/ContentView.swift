@@ -367,7 +367,7 @@ struct ContentView: View {
             }
             .buttonStyle(.borderless)
             .help("About the developer")
-
+            
             Spacer()
             
             // Sync Button
