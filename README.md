@@ -1,52 +1,88 @@
+
 # CloudBooth
 
 **CloudBooth** is a lightweight macOS menu bar application that automatically syncs your Photo Booth library to iCloud Drive. This ensures that your photos and videos are safely backed up and accessible across all your Apple devices.
 
 ## ✨ Features
 
-- Seamless background syncing of Photo Booth media to iCloud Drive  
-- Minimalist menu bar interface  
-- Built with Swift and SwiftUI  
-- No configuration required—just run and let it sync  
+- **Auto-Sync Modes**: Sync your Photo Booth media automatically:
+  - When new photos are added  
+  - Every 6 hours, daily, weekly, or monthly  
+- **Manual Sync**: Instantly sync with a single click  
+- **Sync History Viewer**: See recent sync logs with success/failure status  
+- **Destination Options**: Choose between iCloud Drive or a custom folder  
+- **Simple Menu Bar Interface**: Sync, view history, and quit from the menu  
+- **Built with Swift and SwiftUI**  
+- **No configuration needed**—just run and let it sync  
+
+> 🔄 *Auto-sync works in the background. Just keep the app running.*
+
+---
+
+## 🔧 Installation
+
+1. Download the latest version of the app:  
+👉 [Releases Page](https://github.com/Navaneeth-Git/CloudBooth/releases)
+
+2. Locate the downloaded file:  
+`CloudBooth.app.zip`
+
+3. **Double-click** the `.zip` file to extract `CloudBooth.app`.
+
+4. **(Recommended)** Drag `CloudBooth.app` into your `/Applications` folder.
+
+5. Since the app is **not signed or notarized**, you need to **dequarantine** it:
+
+   Open **Terminal**, type the following command, and **drag the app from Applications into Terminal**:
+
+   ```bash
+   xattr -rd com.apple.quarantine 
+   ```
+
+   Press `Return`.
+
+6. After this, you can open CloudBooth normally and start syncing.
+
+---
+
+## 🔑 Folder Access Permissions
+
+To function correctly, **CloudBooth will request access multiple times** for the following locations:
+
+- `~/Pictures/Photo Booth Library` (read access)
+- Destination folder (iCloud Drive or custom location - write access)
+
+> **You must grant full permission to every folder prompt** for the app to work correctly.
+
+---
 
 ## 🔐 Privacy & Security
 
-- **CloudBooth never accesses or uploads your personal files to any third-party cloud services.**  
-- The app *only* copies media files from the local Photo Booth library to your iCloud Drive directory—*nothing more*.  
-- No internet communication or data harvesting of any kind is performed. Your media remains private and local to your Apple ecosystem.
+- **CloudBooth never accesses or uploads your personal files to any third-party services.**
+- It **only copies media files** from the local Photo Booth library to your selected destination folder.
+- No network activity or data harvesting.  
+- All operations are strictly local and private within your Apple ecosystem.
 
-## 🔑 Folder Access Permission
+---
 
-To function correctly, **CloudBooth requires permission to access the following directories**:
+## 🧩 How It Works
 
-- `~/Pictures/Photo Booth Library`
-- Your desired iCloud Drive destination
+CloudBooth monitors your Photo Booth Library at:
 
-Upon first run, macOS will prompt you to grant access to these folders. Please ensure you approve access for the app to sync your media.
+```bash
+~/Pictures/Photo Booth Library
+```
 
-## ⚠️ Important Notice
+It detects new files (based on your sync preference) and copies them to:
 
-Since I don’t have an Apple Developer account, I’m unable to sign or notarize the app. Instead, I’ve pulled out the unsigned **debug build** from Xcode for you to use. Because of this, macOS may block the app when you try to open it.
+- `/Users/[username]/Library/Mobile Documents/com~apple~CloudDocs/CloudBooth` (iCloud), or
+- A custom folder you choose.
 
-### 🧭 How to Open the Unsigned App
+You can also manually sync anytime using the **Sync Now** button.
 
-After downloading and unzipping the app from the release:
+---
 
-1. Move the app to your `/Applications` folder (optional but recommended).
-2. Right-click the app and select **Open**.
-3. A warning dialog will appear – click **Open** again.
-4. From then on, you can launch it like any other app.
-
-> You only need to do this once. macOS will remember your choice.
-
-## 📦 Download
-
-You can find the latest debug build here:  
-👉 [Releases Page](https://github.com/Navaneeth-Git/CloudBooth/releases)
-
-## 📸 Screenshots
-
-![64](https://github.com/user-attachments/assets/5b7fd386-7b23-4468-8f10-1015919bb4f7)
+## 🖼️ Screenshots
 
 <p float="left">
   <img src="https://github.com/user-attachments/assets/fe14f595-43ff-4eca-8304-8db08b5a0c00" width="45%" />
@@ -58,28 +94,25 @@ You can find the latest debug build here:
   <img src="https://github.com/user-attachments/assets/c6741e38-f8ab-4b92-a221-01b2ecc3c18a" width="45%" />
 </p>
 
-## 🧩 How It Works
-
-CloudBooth monitors the Photo Booth library located at:
-
-```bash
-~/Pictures/Photo Booth Library
-```
-
-It automatically copies any new media files (photos/videos) to a designated folder in your **iCloud Drive**, ensuring they are backed up and available on your other devices.
+---
 
 ## 💡 Notes
 
-- CloudBooth runs silently in the background. You can view the sync status and other options by clicking the menu bar icon.  
-- No additional setup is required after initial permissions are granted.  
+- CloudBooth runs silently in the background. Check the menu bar for status and controls.
+- The sync history tab tracks all your past syncs (success & failure).
+- Remember: Auto-sync will only run if the app is kept running in the background.
+
+---
 
 ## 🧾 License
 
 This project is licensed under the [Apache License 2.0](LICENSE).
 
+---
+
 ## 🙏 Acknowledgments
 
-Pulled together without code signing by [Navaneeth-Git](https://github.com/Navaneeth-Git).  
-If you find this project helpful, consider starring the repository or contributing!  
-<a href="https://www.flaticon.com/free-icons/synchronize" title="synchronize icons">Synchronize icons created by Tempo_doloe - Flaticon</a>
-"""
+Created by [Navaneeth-Git](https://github.com/Navaneeth-Git)  
+If you found this helpful, please star ⭐ the repo or contribute!
+
+> Synchronize icons by [Tempo_doloe - Flaticon](https://www.flaticon.com/free-icons/synchronize)
