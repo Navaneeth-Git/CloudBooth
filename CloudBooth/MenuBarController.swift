@@ -169,14 +169,8 @@ struct MenuBarView: View {
                 .onAppear {
                     if isLoading { animateUpload = true }
                 }
-                .onChange(of: isLoading) { _, newValue in
-                    if newValue {
-                        withAnimation(.easeInOut(duration: 0.7).repeatForever()) {
-                            animateUpload.toggle()
-                        }
-                    } else {
-                        animateUpload = false
-                    }
+                .onChange(of: isLoading) { newValue in
+                    animateUpload = newValue
                 }
                 Text("CloudBooth")
                     .font(.headline)

@@ -5,592 +5,549 @@ import AppKit
 class FileAccessManager {
     static let shared = FileAccessManager()
     
-    // Keys for UserDefaults
-    private let permissionsGrantedKey = "FileAccessPermissionsGranted"
-    private let iCloudBookmarkKey = "iCloudBookmarkData"
+    // Keys for storing security-scoped bookmarks in UserDefaults
+    let originalsBookmarkKey = "originalsBookmark"
+    let picturesBookmarkKey = "picturesBookmark" 
+    let iCloudBookmarkKey = "iCloudBookmark"
     
-    private init() {
-        // Try to restore any saved bookmarks on init
-        restoreSavedBookmarks()
+    // Track which folders exist
+    @Published var originalsExists = false
+    @Published var picturesExists = false
+    
+    private init() {}
+    
+    // Get the real home directory (not container path)
+    func getRealHomeDirectory() -> String {
+        // Get the actual username from process info
+        let currentUser = NSUserName()
+        return "/Users/\(currentUser)"
     }
     
-    // MARK: - Bookmark Management
-    
-    // Restore any saved security-scoped bookmarks
-    private func restoreSavedBookmarks() {
-        // Try to restore iCloud bookmark if available
-        if let bookmarkData = UserDefaults.standard.data(forKey: iCloudBookmarkKey) {
-            do {
-                var isStale = false
-                let url = try URL(resolvingBookmarkData: bookmarkData, 
-                                  options: [.withSecurityScope], 
-                                  relativeTo: nil, 
-                                  bookmarkDataIsStale: &isStale)
-                
-                // If bookmark is stale, we'll need to request access again
-                if isStale {
-                    print("⚠️ iCloud bookmark is stale - will need to request access again")
-                    UserDefaults.standard.removeObject(forKey: iCloudBookmarkKey)
-                } else {
-                    print("✅ Successfully restored iCloud bookmark to: \(url.path)")
-                }
-            } catch {
-                print("❌ Failed to restore iCloud bookmark: \(error.localizedDescription)")
-                UserDefaults.standard.removeObject(forKey: iCloudBookmarkKey)
-            }
-        }
+    // Get iCloud Drive path
+    func getICloudDirectory() -> String {
+        return "\(getRealHomeDirectory())/Library/Mobile Documents/com~apple~CloudDocs"
     }
     
-    // Request explicit iCloud access from user and store bookmark
-    func requestExplicitiCloudAccess() -> URL? {
-        let openPanel = NSOpenPanel()
-        openPanel.message = "Please select your iCloud Drive folder to grant CloudBooth access"
-        openPanel.prompt = "Grant Access"
-        
-        // Try to start in the iCloud folder if possible
-        let containerPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
-        if let possibleiCloud = containerPath?.deletingLastPathComponent().appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs") {
-            if FileManager.default.fileExists(atPath: possibleiCloud.path) {
-                openPanel.directoryURL = possibleiCloud
-            }
-        }
-        
-        openPanel.canChooseDirectories = true
-        openPanel.canChooseFiles = false
-        openPanel.allowsMultipleSelection = false
-        openPanel.level = .modalPanel
-        
-        // Bring app to front
-        NSApp.activate(ignoringOtherApps: true)
-        
-        if openPanel.runModal() == .OK, let selectedURL = openPanel.url {
-            // Try to create a security-scoped bookmark
-            do {
-                // Start accessing
-                if !selectedURL.startAccessingSecurityScopedResource() {
-                    print("⚠️ Could not access security-scoped resource")
-                }
-                
-                // Create a security scoped bookmark
-                let bookmarkData = try selectedURL.bookmarkData(options: .withSecurityScope, 
-                                                               includingResourceValuesForKeys: nil, 
-                                                               relativeTo: nil)
-                
-                // Save the bookmark
-                UserDefaults.standard.set(bookmarkData, forKey: iCloudBookmarkKey)
-                
-                print("✅ Successfully created security-scoped bookmark for: \(selectedURL.path)")
-                
-                // Stop accessing
-                selectedURL.stopAccessingSecurityScopedResource()
-                
-                return selectedURL
-            } catch {
-                print("❌ Failed to create security-scoped bookmark: \(error.localizedDescription)")
-                return nil
-            }
-        }
-        
-        print("❌ User cancelled iCloud folder selection")
-        return nil
-    }
-    
-    // Get iCloud Drive with access to user-selected location
-    func iCloudDrive() -> URL {
-        // First try to use security-scoped bookmark if available
-        if let bookmarkData = UserDefaults.standard.data(forKey: iCloudBookmarkKey) {
-            do {
-                var isStale = false
-                let url = try URL(resolvingBookmarkData: bookmarkData, 
-                                  options: [.withSecurityScope], 
-                                  relativeTo: nil, 
-                                  bookmarkDataIsStale: &isStale)
-                
-                // Start accessing the security-scoped resource
-                if url.startAccessingSecurityScopedResource() {
-                    print("🔍 Using security-scoped bookmarked iCloud path: \(url.path)")
-                    return url
-                } else {
-                    print("⚠️ Failed to start accessing security-scoped resource")
-                }
-            } catch {
-                print("❌ Failed to use iCloud bookmark: \(error.localizedDescription)")
-                UserDefaults.standard.removeObject(forKey: iCloudBookmarkKey)
-            }
-        }
-        
-        // Fall back to container path if we can't use the bookmark
-        // For sandboxed apps, we need to accept that we're in a container
-        let fileManager = FileManager.default
-        
-        // Check for the container-specific path to iCloud which is most reliable
-        let containerPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
-        if let containerURL = containerPath?.deletingLastPathComponent().appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs") {
-            print("🔍 Using container iCloud path (fallback): \(containerURL.path)")
-            return containerURL
-        }
-        
-        // Final fallback to using home directory
-        let homeDir = fileManager.homeDirectoryForCurrentUser
-        let directiCloudPath = homeDir.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs")
-        
-        print("🔍 Using home iCloud path (final fallback): \(directiCloudPath.path)")
-        return directiCloudPath
-    }
-    
-    // Get the path to the user's Photo Booth library
-    func photoBooth(subFolder: String? = nil) -> URL {
-        let fileManager = FileManager.default
-        let homeDirectory = fileManager.homeDirectoryForCurrentUser
-        
-        // Standard Photo Booth location
-        let standardPath = homeDirectory.appendingPathComponent("Pictures/Photo Booth Library")
-        
-        // Check if the standard path exists
+    // Request access and save a security-scoped bookmark
+    func requestAccessPermission(to url: URL, bookmarkKey: String) -> Bool {
+        // First check if the directory exists
         var isDirectory: ObjCBool = false
-        if fileManager.fileExists(atPath: standardPath.path, isDirectory: &isDirectory) && isDirectory.boolValue {
-            print("✅ Standard Photo Booth library path exists")
-            
-            // Add subfolder if requested
-            if let subFolder = subFolder {
-                return standardPath.appendingPathComponent(subFolder)
-            }
-            
-            return standardPath
-        }
-        
-        // If the standard path doesn't exist, try to search for it
-        print("⚠️ Standard Photo Booth library path not found, attempting to locate...")
-        
-        // Try searching in the Pictures directory
-        do {
-            let picturesPath = homeDirectory.appendingPathComponent("Pictures")
-            if fileManager.fileExists(atPath: picturesPath.path, isDirectory: &isDirectory) && isDirectory.boolValue {
-                let contents = try fileManager.contentsOfDirectory(at: picturesPath, includingPropertiesForKeys: nil)
-                
-                // Look for "Photo Booth Library" directory
-                for item in contents {
-                    if item.lastPathComponent == "Photo Booth Library" && 
-                       fileManager.fileExists(atPath: item.path, isDirectory: &isDirectory) && 
-                       isDirectory.boolValue {
-                        print("✅ Found Photo Booth library at: \(item.path)")
-                        
-                        // Add subfolder if requested
-                        if let subFolder = subFolder {
-                            return item.appendingPathComponent(subFolder)
-                        }
-                        
-                        return item
-                    }
-                }
-            }
-        } catch {
-            print("⚠️ Error searching for Photo Booth library: \(error.localizedDescription)")
-        }
-        
-        // If we still can't find it, use the standard path
-        print("⚠️ Could not locate Photo Booth library, using standard path")
-        
-        // Add subfolder if requested
-        if let subFolder = subFolder {
-            return standardPath.appendingPathComponent(subFolder)
-        }
-        
-        return standardPath
-    }
-    
-    // Check if iCloud Drive is available
-    func isiCloudDriveAvailable() -> Bool {
-        do {
-            let url = iCloudDrive()
-            let _ = try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
-            return true
-        } catch {
-            print("⚠️ iCloud Drive is not available: \(error.localizedDescription)")
-            return false
-        }
-    }
-    
-    func requestAccessPermission(to url: URL) -> Bool {
-        print("Requesting access permission to: \(url.path)")
-        
-        // Verify the directory exists
-        let fileManager = FileManager.default
-        var isDirectory: ObjCBool = false
-        let exists = fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
-        
-        if !exists {
-            print("⚠️ ERROR: Directory does not exist: \(url.path)")
-            // Try to create the directory if it doesn't exist and it's the CloudBooth directory in iCloud
-            if url.path.contains("CloudBooth") && url.path.contains("com~apple~CloudDocs") {
-                do {
-                    try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
-                    print("📁 Created directory: \(url.path)")
-                    
-                    // Verify it was created successfully
-                    let nowExists = fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
-                    print("Directory created successfully: \(nowExists), isDirectory: \(isDirectory.boolValue)")
-                    
-                    if !nowExists {
-                        print("⚠️ Failed to create directory even though no error was thrown")
-                        return false
-                    }
-                } catch {
-                    print("⚠️ Failed to create directory: \(error.localizedDescription)")
-                    // Display an alert to the user with more info
-                    DispatchQueue.main.async {
-                        let alert = NSAlert()
-                        alert.messageText = "Failed to Create Directory"
-                        alert.informativeText = "Could not create the CloudBooth directory in iCloud Drive. Error: \(error.localizedDescription)\n\nPath: \(url.path)"
-                        alert.alertStyle = .warning
-                        alert.addButton(withTitle: "OK")
-                        alert.runModal()
-                    }
-                    return false
-                }
-            } else {
-                // Display an alert to the user with more info
-                DispatchQueue.main.async {
-                    let alert = NSAlert()
-                    alert.messageText = "Directory Not Found"
-                    alert.informativeText = "The required directory does not exist: \(url.path)"
-                    alert.alertStyle = .warning
-                    alert.addButton(withTitle: "OK")
-                    alert.runModal()
-                }
-                return false
-            }
-        }
-        
-        if !isDirectory.boolValue {
-            print("⚠️ ERROR: Path exists but is not a directory: \(url.path)")
-            // Display an alert to the user with more info
-            DispatchQueue.main.async {
-                let alert = NSAlert()
-                alert.messageText = "Not a Directory"
-                alert.informativeText = "The path exists but is not a directory: \(url.path)"
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "OK")
-                alert.runModal()
-            }
+        if !FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) || !isDirectory.boolValue {
+            // Directory doesn't exist
             return false
         }
         
-        // Check if we already have access by trying to read the directory
-        if canAccessDirectory(url) {
-            print("✅ Already have access to: \(url.path)")
-            return true
+        // Check if we have a saved bookmark
+        if let bookmarkData = UserDefaults.standard.data(forKey: bookmarkKey) {
+            var isStale = false
+            do {
+                let resolvedURL = try URL(resolvingBookmarkData: bookmarkData,
+                                          options: .withSecurityScope,
+                                          relativeTo: nil,
+                                          bookmarkDataIsStale: &isStale)
+                
+                if resolvedURL.startAccessingSecurityScopedResource() {
+                    // Stop accessing for now (we'll start again when needed)
+                    resolvedURL.stopAccessingSecurityScopedResource()
+                    
+                    // If the bookmark is stale but we still got access, update it
+                    if isStale {
+                        saveSecurityScopedBookmark(for: resolvedURL, key: bookmarkKey)
+                    }
+                    
+                    return true
+                }
+            } catch {
+                print("Error resolving bookmark for \(url.path): \(error)")
+                // Continue to request access again
+            }
         }
-        
-        print("🔒 Need to request access for: \(url.path)")
         
         // Request access via open panel
         let openPanel = NSOpenPanel()
+        openPanel.message = "Please select the \(url.lastPathComponent) folder to grant access"
+        openPanel.prompt = "Grant Access"
         
-        // Make the message more clear about what folder to select
-        if url.path.contains("Photo Booth Library") {
-            openPanel.message = "Please select your Photo Booth Library folder:\n/Users/[username]/Pictures/Photo Booth Library"
-        } else if url.path.contains("com~apple~CloudDocs") {
-            openPanel.message = "Please select your iCloud Drive folder"
+        // Navigate to the parent directory instead to make selection easier
+        let parentURL = url.deletingLastPathComponent()
+        if FileManager.default.fileExists(atPath: parentURL.path) {
+            openPanel.directoryURL = parentURL
         } else {
-            openPanel.message = "CloudBooth needs access to \(url.path)\nPlease select this exact folder to continue."
+            // If parent doesn't exist, try to navigate to the Pictures folder
+            let homeDir = getRealHomeDirectory()
+            let picturesDir = URL(fileURLWithPath: "\(homeDir)/Pictures")
+            if FileManager.default.fileExists(atPath: picturesDir.path) {
+                openPanel.directoryURL = picturesDir
+            }
         }
         
-        openPanel.prompt = "Grant Access"
-        openPanel.directoryURL = url
         openPanel.canChooseDirectories = true
         openPanel.canChooseFiles = false
         openPanel.allowsMultipleSelection = false
-        openPanel.level = .modalPanel
-        
-        // Bring to front and focus
-        NSApp.activate(ignoringOtherApps: true)
+        openPanel.showsHiddenFiles = false
+        openPanel.canCreateDirectories = false
+        openPanel.treatsFilePackagesAsDirectories = true // Important for Photo Booth Library
         
         if openPanel.runModal() == .OK, let selectedURL = openPanel.url {
-            // Check if we got access to the correct directory
-            print("User selected directory: \(selectedURL.path)")
+            // Check if the selected directory matches what we expect
+            print("Selected URL: \(selectedURL.path)")
+            print("Target URL: \(url.path)")
             
-            // Use a smarter path comparison based on the type of directory
-            let isCorrectSelection = isSelectedPathCorrect(expected: url, selected: selectedURL)
-            
-            if isCorrectSelection {
-                let hasAccess = canAccessDirectory(selectedURL)
-                print(hasAccess ? "✅ Successfully gained access to selected path" : "❌ Still cannot access selected path")
-                
-                if hasAccess {
-                    // If the selected path is different but correct, we should use this path
-                    // going forward for this session
-                    if selectedURL.path.lowercased() != url.path.lowercased() {
-                        print("⚠️ Note: User selected an equivalent path but not exactly matching.")
-                    }
-                    return true
-                } else {
-                    // Display an error alert
-                    DispatchQueue.main.async {
-                        let alert = NSAlert()
-                        alert.messageText = "Permission Error"
-                        alert.informativeText = "CloudBooth still cannot access the selected folder. Please ensure you have the necessary permissions."
-                        alert.alertStyle = .warning
-                        alert.addButton(withTitle: "OK")
-                        alert.runModal()
-                    }
-                    return false
+            // If user selected a parent directory, try to resolve to target directory
+            var targetURL = selectedURL
+            if selectedURL.lastPathComponent != url.lastPathComponent {
+                // Check if they selected a parent directory
+                let potentialTargetURL = selectedURL.appendingPathComponent(url.lastPathComponent)
+                if FileManager.default.fileExists(atPath: potentialTargetURL.path) {
+                    targetURL = potentialTargetURL
+                    print("Resolved to target subdirectory: \(targetURL.path)")
                 }
-            } else {
-                print("❌ User selected different directory than needed")
-                // Display an error alert with more details about the expected path
-                DispatchQueue.main.async {
-                    let alert = NSAlert()
-                    alert.messageText = "Incorrect Selection"
-                    alert.informativeText = self.createPathErrorMessage(expected: url, selected: selectedURL)
-                    alert.alertStyle = .warning
-                    alert.addButton(withTitle: "OK")
-                    alert.runModal()
-                }
-                return false
-            }
-        } else {
-            print("❌ User cancelled permission dialog")
-            return false
-        }
-    }
-    
-    // Helper to determine if the selected path is the correct type of path we need
-    private func isSelectedPathCorrect(expected: URL, selected: URL) -> Bool {
-        // Exact match is always valid
-        if selected.path.lowercased() == expected.path.lowercased() {
-            return true
-        }
-        
-        // For Photo Booth Library folders
-        if expected.path.contains("Photo Booth Library") {
-            // Check if it's a valid Photo Booth path with the right subfolder
-            let isPhotoBooth = selected.path.contains("Photo Booth Library")
-            
-            // Check if we're looking at the correct subfolder (Originals or Pictures)
-            if let expectedSubfolder = getPhotoBoothSubfolder(from: expected.path),
-               let selectedSubfolder = getPhotoBoothSubfolder(from: selected.path) {
-                return isPhotoBooth && (expectedSubfolder == selectedSubfolder)
             }
             
-            // If we couldn't extract subfolders, just check if it's Photo Booth
-            return isPhotoBooth
+            // Save the security-scoped bookmark
+            return saveSecurityScopedBookmark(for: targetURL, key: bookmarkKey)
         }
         
-        // For iCloud Drive folders
-        if expected.path.contains("CloudDocs") || expected.path.contains("iCloud Drive") {
-            return selected.path.contains("CloudDocs") || selected.path.contains("iCloud Drive")
-        }
-        
-        // For CloudBooth folder in iCloud
-        if expected.lastPathComponent == "CloudBooth" && expected.path.contains("CloudDocs") {
-            return selected.lastPathComponent == "CloudBooth" &&
-                   (selected.path.contains("CloudDocs") || selected.path.contains("iCloud Drive"))
-        }
-        
-        // Default to exact match for other paths
         return false
     }
     
-    // Helper to extract the Photo Booth subfolder (Originals or Pictures)
-    private func getPhotoBoothSubfolder(from path: String) -> String? {
-        if path.hasSuffix("/Originals") {
-            return "Originals"
-        } else if path.hasSuffix("/Pictures") {
-            return "Pictures"
+    // Save a security-scoped bookmark
+    private func saveSecurityScopedBookmark(for url: URL, key: String) -> Bool {
+        do {
+            let bookmarkData = try url.bookmarkData(options: .withSecurityScope,
+                                                  includingResourceValuesForKeys: nil,
+                                                  relativeTo: nil)
+            UserDefaults.standard.set(bookmarkData, forKey: key)
+            return true
+        } catch {
+            print("Failed to create security-scoped bookmark for \(url.path): \(error)")
+            return false
         }
+    }
+    
+    // Access a URL using a stored bookmark - with better error handling and persistence
+    func accessURLWithBookmark(_ key: String) -> URL? {
+        guard let bookmarkData = UserDefaults.standard.data(forKey: key) else {
+            print("No bookmark data found for key: \(key)")
+            return nil
+        }
+        
+        var isStale = false
+        do {
+            let url = try URL(resolvingBookmarkData: bookmarkData,
+                            options: .withSecurityScope,
+                            relativeTo: nil,
+                            bookmarkDataIsStale: &isStale)
+            
+            if isStale {
+                print("Bookmark is stale for \(key), attempting to refresh")
+                // Try to refresh the bookmark
+                if url.startAccessingSecurityScopedResource() {
+                    do {
+                        let newBookmarkData = try url.bookmarkData(options: .withSecurityScope,
+                                                              includingResourceValuesForKeys: nil,
+                                                              relativeTo: nil)
+                        UserDefaults.standard.set(newBookmarkData, forKey: key)
+                        print("Successfully refreshed bookmark for \(key)")
+                    } catch {
+                        print("Failed to refresh bookmark: \(error)")
+                    }
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+            
+            // Try again with the potentially refreshed bookmark
+            if url.startAccessingSecurityScopedResource() {
+                print("Successfully accessed URL for key: \(key), path: \(url.path)")
+                return url
+            } else {
+                print("Failed to access resource with bookmark: \(key)")
+            }
+        } catch {
+            print("Failed to resolve bookmark for key \(key): \(error)")
+        }
+        
         return nil
     }
     
-    // Create a friendly error message for path selection issues
-    private func createPathErrorMessage(expected: URL, selected: URL) -> String {
-        // For Photo Booth paths
-        if expected.path.contains("Photo Booth Library") {
-            let subfolder = expected.path.hasSuffix("/Originals") ? "Originals" : 
-                           expected.path.hasSuffix("/Pictures") ? "Pictures" : ""
-            
-            return "Please select the correct Photo Booth Library \(subfolder) folder.\n\n" +
-                   "Expected folder: Pictures/Photo Booth Library/\(subfolder)\n" +
-                   "You selected: \(selected.path)"
-        }
-        
-        // For iCloud paths
-        if expected.path.contains("CloudDocs") {
-            return "Please select your iCloud Drive folder.\n\n" +
-                   "You selected: \(selected.path)"
-        }
-        
-        // Generic message
-        return "You selected a different folder than the one CloudBooth needs access to.\n\n" +
-               "Needed: \(expected.path)\n" +
-               "Selected: \(selected.path)"
+    // Stop accessing a URL
+    func stopAccessingURL(_ url: URL) {
+        url.stopAccessingSecurityScopedResource()
     }
     
-    // Check if we can actually access a directory by trying to list its contents
-    private func canAccessDirectory(_ url: URL) -> Bool {
-        do {
-            let contents = try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
-            print("📂 Can access directory \(url.path). Contents count: \(contents.count)")
-            return true
-        } catch {
-            print("❌ Cannot access directory \(url.path): \(error.localizedDescription)")
-            return false
-        }
-    }
-    
-    func ensureDirectoryAccess() async -> Bool {
-        print("🔍 Checking directory access permissions...")
-        
-        // Check if permissions were already granted
-        let permissionsAlreadyGranted = UserDefaults.standard.bool(forKey: permissionsGrantedKey)
-        print("Permissions previously granted: \(permissionsAlreadyGranted)")
-        
-        if permissionsAlreadyGranted {
-            // Verify we can still access all directories
-            let originalsURL = photoBooth(subFolder: "Originals")
-            let picturesURL = photoBooth(subFolder: "Pictures")
-            
-            // Get the direct iCloud path instead of container path
-            let directiCloudURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs")
-            let destinationURL = directiCloudURL.appendingPathComponent("CloudBooth")
-            
-            print("Verifying access to previously granted directories...")
-            print("Photo Booth Originals: \(originalsURL.path)")
-            print("Photo Booth Pictures: \(picturesURL.path)")
-            print("iCloud destination: \(destinationURL.path)")
-            
-            let canAccessOriginals = canAccessDirectory(originalsURL)
-            let canAccessPictures = canAccessDirectory(picturesURL)
-            let canAccessDestination = canAccessDirectory(destinationURL)
-            
-            if canAccessOriginals && canAccessPictures && canAccessDestination {
-                print("✅ All permissions still valid")
-                // Save the direct iCloud path as a bookmark for future use
-                if UserDefaults.standard.data(forKey: iCloudBookmarkKey) == nil {
-                    _ = requestExplicitiCloudAccess()
-                }
-                return true
-            }
-            
-            print("⚠️ Some directories are no longer accessible, resetting permissions")
-            // If we can't access one of the directories, reset the stored permission state
-            UserDefaults.standard.set(false, forKey: permissionsGrantedKey)
-        }
-        
-        // Simulate an async operation by adding a small delay
-        try? await Task.sleep(nanoseconds: 10_000_000) // 0.01 second
-        
-        // Source directories
-        let originalsURL = photoBooth(subFolder: "Originals")
-        let picturesURL = photoBooth(subFolder: "Pictures")
-        
-        print("Photo Booth directories to request access:")
-        print("- Originals: \(originalsURL.path)")
-        print("- Pictures: \(picturesURL.path)")
-        
-        // First check if the Photo Booth directories exist before requesting permission
-        let fileManager = FileManager.default
+    // Check if a directory exists
+    private func directoryExists(at path: String) -> Bool {
         var isDirectory: ObjCBool = false
+        let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
+        return exists && isDirectory.boolValue
+    }
+    
+    // Simple direct method to show file selection dialog and get permission
+    func directlyRequestAccess(to path: String, message: String) -> Bool {
+        let url = URL(fileURLWithPath: path)
         
-        let originalsExist = fileManager.fileExists(atPath: originalsURL.path, isDirectory: &isDirectory) && isDirectory.boolValue
-        let picturesExist = fileManager.fileExists(atPath: picturesURL.path, isDirectory: &isDirectory) && isDirectory.boolValue
-        
-        if !originalsExist || !picturesExist {
-            DispatchQueue.main.async {
-                let alert = NSAlert()
-                alert.messageText = "Photo Booth Folders Not Found"
-                alert.informativeText = "CloudBooth could not find your Photo Booth Library folders. Please ensure Photo Booth has been launched at least once on this Mac to create these folders."
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "OK")
-                alert.runModal()
-            }
+        if !FileManager.default.fileExists(atPath: path) {
+            print("Path does not exist: \(path)")
             return false
         }
         
-        // Get the direct iCloud path instead of container path
-        let directiCloudURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs")
+        let openPanel = NSOpenPanel()
+        openPanel.message = message
+        openPanel.prompt = "Grant Access"
+        openPanel.canChooseDirectories = true
+        openPanel.canChooseFiles = false
+        openPanel.allowsMultipleSelection = false
+        openPanel.showsHiddenFiles = false
         
-        // Destination directory - create CloudBooth folder in iCloud Drive
-        let destinationURL = directiCloudURL.appendingPathComponent("CloudBooth")
-        
-        print("Direct iCloud destination: \(destinationURL.path)")
-        
-        // Ask the user for permission to access the iCloud Drive folder directly
-        print("Requesting explicit permission for iCloud Drive...")
-        let iCloudURL = requestExplicitiCloudAccess()
-        if iCloudURL == nil {
-            DispatchQueue.main.async {
-                let alert = NSAlert()
-                alert.messageText = "iCloud Drive Access Required"
-                alert.informativeText = "CloudBooth needs access to your iCloud Drive to sync files. Please grant access when prompted."
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "OK")
-                alert.runModal()
-            }
-            return false
+        // Special handling for Photo Booth Library which is a package
+        if path.contains("Photo Booth Library") {
+            openPanel.treatsFilePackagesAsDirectories = true
         }
         
-        // Create the CloudBooth folder if it doesn't exist
-        if !fileManager.fileExists(atPath: destinationURL.path) {
+        // Navigate to the parent directory
+        let parentURL = url.deletingLastPathComponent()
+        if FileManager.default.fileExists(atPath: parentURL.path) {
+            openPanel.directoryURL = parentURL
+        } else {
+            // Fallback to home directory
+            openPanel.directoryURL = URL(fileURLWithPath: getRealHomeDirectory())
+        }
+        
+        // Debug info
+        print("Requesting access to: \(path)")
+        print("Setting initial directory to: \(openPanel.directoryURL?.path ?? "unknown")")
+        
+        if openPanel.runModal() == .OK, let selectedURL = openPanel.url {
+            print("Selected URL: \(selectedURL.path)")
+            
+            // Try to save a security-scoped bookmark for future use
             do {
-                try fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true)
-                print("📁 Created CloudBooth directory in iCloud Drive")
-            } catch {
-                print("⚠️ Failed to create CloudBooth directory: \(error.localizedDescription)")
-                DispatchQueue.main.async {
-                    let alert = NSAlert()
-                    alert.messageText = "Failed to Create Directory"
-                    alert.informativeText = "CloudBooth could not create a folder in your iCloud Drive. Error: \(error.localizedDescription)"
-                    alert.alertStyle = .warning
-                    alert.addButton(withTitle: "OK")
-                    alert.runModal()
+                let bookmarkKey = "bookmark_\(url.lastPathComponent)"
+                let bookmarkData = try selectedURL.bookmarkData(options: .withSecurityScope,
+                                                             includingResourceValuesForKeys: nil,
+                                                             relativeTo: nil)
+                UserDefaults.standard.set(bookmarkData, forKey: bookmarkKey)
+                
+                // Also save to the specific bookmark key for this folder type
+                if path.contains("Originals") {
+                    UserDefaults.standard.set(bookmarkData, forKey: originalsBookmarkKey)
+                } else if path.contains("Pictures") && path.contains("Photo Booth") {
+                    UserDefaults.standard.set(bookmarkData, forKey: picturesBookmarkKey)
+                } else if path.contains("iCloud") || path.contains("CloudDocs") {
+                    UserDefaults.standard.set(bookmarkData, forKey: iCloudBookmarkKey)
                 }
+                
+                return true
+            } catch {
+                print("Failed to save bookmark: \(error)")
                 return false
             }
         }
         
-        // Request access to all directories
-        print("Requesting permission for all required directories...")
-        let originalsAccess = requestAccessPermission(to: originalsURL)
-        
-        if !originalsAccess {
-            print("❌ Failed to get access to Originals folder")
-            return false
-        }
-        
-        let picturesAccess = requestAccessPermission(to: picturesURL)
-        
-        if !picturesAccess {
-            print("❌ Failed to get access to Pictures folder")
-            return false
-        }
-        
-        let destAccess = requestAccessPermission(to: destinationURL)
-        
-        if !destAccess {
-            print("❌ Failed to get access to iCloud destination folder")
-            return false
-        }
-        
-        // Final verification
-        let allAccessGranted = originalsAccess && picturesAccess && destAccess
-        
-        // Store permission state
-        UserDefaults.standard.set(allAccessGranted, forKey: permissionsGrantedKey)
-        print(allAccessGranted ? "✅ All permissions granted and saved" : "❌ Not all permissions were granted")
-        
-        return allAccessGranted
+        return false
     }
     
-    // Helper to get the resolved destination URL
-    func resolvedDestinationURL() -> URL? {
-        let destinationURL = iCloudDrive().appendingPathComponent("CloudBooth")
-        return destinationURL
+    // Force permission request for all paths - more direct approach
+    func forceRequestPermissions() async -> Bool {
+        print("Starting force request permissions")
+        
+        // Get the correct Photo Booth paths first
+        let (originalsPath, picturesPath) = getCorrectPhotoBooth()
+        
+        // Check which folders actually exist
+        originalsExists = directoryExists(at: originalsPath)
+        picturesExists = directoryExists(at: picturesPath)
+        
+        // Check for Pictures folder first
+        let homeDir = getRealHomeDirectory()
+        let picturesDirPath = "\(homeDir)/Pictures"
+        
+        // Check if we already have bookmarks
+        let hasOriginalsBookmark = UserDefaults.standard.data(forKey: originalsBookmarkKey) != nil
+        let hasPicturesBookmark = UserDefaults.standard.data(forKey: picturesBookmarkKey) != nil
+        let hasICloudBookmark = UserDefaults.standard.data(forKey: iCloudBookmarkKey) != nil
+        
+        print("Existing bookmarks check - Originals: \(hasOriginalsBookmark), Pictures: \(hasPicturesBookmark), iCloud: \(hasICloudBookmark)")
+        
+        // If we have all necessary bookmarks and they work, don't request again
+        if (originalsExists && hasOriginalsBookmark || picturesExists && hasPicturesBookmark) && hasICloudBookmark {
+            let canAccessOriginals = originalsExists ? accessOriginalsDirectory() != nil : true
+            let canAccessPictures = picturesExists ? accessPicturesDirectory() != nil : true
+            let canAccessICloud = accessICloudDirectory() != nil
+            
+            print("Testing bookmark access - Originals: \(canAccessOriginals), Pictures: \(canAccessPictures), iCloud: \(canAccessICloud)")
+            
+            if (canAccessOriginals || canAccessPictures) && canAccessICloud {
+                print("Successfully accessed directories with existing bookmarks")
+                return true
+            }
+        }
+        
+        // If we got here, we need to request permissions
+        print("Need to request new permissions")
+        
+        // First, request access to Pictures folder
+        if !directlyRequestAccess(to: picturesDirPath, message: "Please select your Pictures folder") {
+            print("Could not get access to Pictures folder")
+            return false
+        }
+        
+        // Check for Photo Booth Library folder
+        let photoBoothLibPath = "\(picturesDirPath)/Photo Booth Library"
+        if directoryExists(at: photoBoothLibPath) {
+            _ = directlyRequestAccess(to: photoBoothLibPath, message: "Please select the Photo Booth Library folder")
+        }
+        
+        // Check for alternative Photo Booth folder
+        let altPhotoBoothPath = "\(picturesDirPath)/Photo Booth" 
+        if directoryExists(at: altPhotoBoothPath) {
+            _ = directlyRequestAccess(to: altPhotoBoothPath, message: "Please select the Photo Booth folder")
+        }
+        
+        var hasSourceFolder = false
+        
+        // Now request access to the actual source folders if they exist
+        if originalsExists {
+            print("Requesting access to Originals folder: \(originalsPath)")
+            hasSourceFolder = true
+            let originalsAccess = directlyRequestAccess(to: originalsPath, message: "Please select the Originals folder")
+            
+            // Explicitly save bookmark for originals
+            if originalsAccess {
+                let originalsURL = URL(fileURLWithPath: originalsPath)
+                if originalsURL.startAccessingSecurityScopedResource() {
+                    do {
+                        let bookmarkData = try originalsURL.bookmarkData(options: .withSecurityScope,
+                                                                     includingResourceValuesForKeys: nil,
+                                                                     relativeTo: nil)
+                        UserDefaults.standard.set(bookmarkData, forKey: originalsBookmarkKey)
+                        print("Successfully saved originals bookmark")
+                        originalsURL.stopAccessingSecurityScopedResource()
+                    } catch {
+                        print("Failed to save originals bookmark: \(error)")
+                    }
+                }
+            }
+        }
+        
+        if picturesExists {
+            print("Requesting access to Pictures folder: \(picturesPath)")
+            hasSourceFolder = true
+            let picturesAccess = directlyRequestAccess(to: picturesPath, message: "Please select the Pictures folder")
+            
+            // Explicitly save bookmark for pictures
+            if picturesAccess {
+                let picturesURL = URL(fileURLWithPath: picturesPath)
+                if picturesURL.startAccessingSecurityScopedResource() {
+                    do {
+                        let bookmarkData = try picturesURL.bookmarkData(options: .withSecurityScope,
+                                                                    includingResourceValuesForKeys: nil,
+                                                                    relativeTo: nil)
+                        UserDefaults.standard.set(bookmarkData, forKey: picturesBookmarkKey)
+                        print("Successfully saved pictures bookmark")
+                        picturesURL.stopAccessingSecurityScopedResource()
+                    } catch {
+                        print("Failed to save pictures bookmark: \(error)")
+                    }
+                }
+            }
+        }
+        
+        // Get iCloud access
+        let iCloudPath = getICloudDirectory()
+        let iCloudAccess = directlyRequestAccess(to: iCloudPath, message: "Please select your iCloud Drive folder")
+        
+        // Explicitly save bookmark for iCloud
+        if iCloudAccess {
+            let iCloudURL = URL(fileURLWithPath: iCloudPath)
+            if iCloudURL.startAccessingSecurityScopedResource() {
+                do {
+                    let bookmarkData = try iCloudURL.bookmarkData(options: .withSecurityScope,
+                                                              includingResourceValuesForKeys: nil,
+                                                              relativeTo: nil)
+                    UserDefaults.standard.set(bookmarkData, forKey: iCloudBookmarkKey)
+                    print("Successfully saved iCloud bookmark")
+                    iCloudURL.stopAccessingSecurityScopedResource()
+                } catch {
+                    print("Failed to save iCloud bookmark: \(error)")
+                }
+            }
+        }
+        
+        // Store the discovered paths in UserDefaults so we don't need to rediscover
+        UserDefaults.standard.set(originalsPath, forKey: "discoveredOriginalsPath")
+        UserDefaults.standard.set(picturesPath, forKey: "discoveredPicturesPath")
+        UserDefaults.standard.set(iCloudPath, forKey: "discoveredICloudPath")
+        
+        // Check if we now have valid bookmarks
+        let hasOriginalsBookmarkNow = UserDefaults.standard.data(forKey: originalsBookmarkKey) != nil
+        let hasPicturesBookmarkNow = UserDefaults.standard.data(forKey: picturesBookmarkKey) != nil
+        let hasICloudBookmarkNow = UserDefaults.standard.data(forKey: iCloudBookmarkKey) != nil
+        
+        print("Post-request bookmarks check - Originals: \(hasOriginalsBookmarkNow), Pictures: \(hasPicturesBookmarkNow), iCloud: \(hasICloudBookmarkNow)")
+        
+        return hasSourceFolder
+    }
+
+    // Get the actual correct paths for Photo Booth folders
+    func getCorrectPhotoBooth() -> (originals: String, pictures: String) {
+        let homeDir = getRealHomeDirectory()
+        
+        // Use exactly the paths specified by the user
+        let originalsPath = "\(homeDir)/Pictures/Photo Booth Library/Originals"
+        let picturesPath = "\(homeDir)/Pictures/Photo Booth Library/Pictures"
+        
+        // Verify paths exist
+        let fileManager = FileManager.default
+        let originalsExists = fileManager.fileExists(atPath: originalsPath)
+        let picturesExists = fileManager.fileExists(atPath: picturesPath)
+        
+        print("Photo Booth paths - Originals exists: \(originalsExists), Pictures exists: \(picturesExists)")
+        print("Originals path: \(originalsPath)")
+        print("Pictures path: \(picturesPath)")
+        
+        return (originalsPath, picturesPath)
+    }
+
+    func ensureDirectoryAccess() async -> Bool {
+        // Get the correct Photo Booth paths
+        let (originalsPath, picturesPath) = getCorrectPhotoBooth()
+        
+        // Check which directories exist
+        originalsExists = directoryExists(at: originalsPath)
+        picturesExists = directoryExists(at: picturesPath)
+        
+        // If we already have valid bookmarks, don't request again
+        let hasOriginalsBookmark = UserDefaults.standard.data(forKey: originalsBookmarkKey) != nil
+        let hasPicturesBookmark = UserDefaults.standard.data(forKey: picturesBookmarkKey) != nil
+        let hasICloudBookmark = UserDefaults.standard.data(forKey: iCloudBookmarkKey) != nil
+        
+        // First try to use existing bookmarks before requesting new ones
+        if (originalsExists && hasOriginalsBookmark || picturesExists && hasPicturesBookmark) && hasICloudBookmark {
+            // Try to access with existing bookmarks to verify they still work
+            let canAccessOriginals = originalsExists ? accessURLWithBookmark(originalsBookmarkKey) != nil : true
+            let canAccessPictures = picturesExists ? accessURLWithBookmark(picturesBookmarkKey) != nil : true
+            let canAccessICloud = accessURLWithBookmark(iCloudBookmarkKey) != nil
+            
+            if (canAccessOriginals || canAccessPictures) && canAccessICloud {
+                print("Successfully accessed directories with existing bookmarks")
+                return true
+            }
+        }
+        
+        // Otherwise, we need to request permissions
+        return await forceRequestPermissions()
     }
     
-    // Reset bookmarks when permissions need to be requested again
-    func resetAllBookmarks() {
-        print("🔄 Resetting all saved permissions")
-        UserDefaults.standard.set(false, forKey: permissionsGrantedKey)
+    // Helper method to get access to originals directory
+    func accessOriginalsDirectory() -> URL? {
+        // First check if the directory exists
+        if !originalsExists {
+            return nil
+        }
+        
+        // Try to use the bookmark
+        if let url = accessURLWithBookmark(originalsBookmarkKey) {
+            print("Successfully accessed originals directory via bookmark")
+            return url
+        }
+        
+        // If bookmark access fails, try direct access
+        let (originalsPath, _) = getCorrectPhotoBooth()
+        let originalsURL = URL(fileURLWithPath: originalsPath)
+        
+        // If the file exists, try to create a new bookmark
+        if FileManager.default.fileExists(atPath: originalsPath) {
+            // Try to create a new bookmark for future use
+            if originalsURL.startAccessingSecurityScopedResource() {
+                do {
+                    let bookmarkData = try originalsURL.bookmarkData(options: .withSecurityScope,
+                                                                  includingResourceValuesForKeys: nil,
+                                                                  relativeTo: nil)
+                    UserDefaults.standard.set(bookmarkData, forKey: originalsBookmarkKey)
+                    print("Created new originals bookmark for direct access")
+                    return originalsURL
+                } catch {
+                    print("Failed to create originals bookmark: \(error)")
+                    originalsURL.stopAccessingSecurityScopedResource()
+                }
+            }
+        }
+        
+        // If all else fails, return nil
+        return nil
+    }
+    
+    // Helper method to get access to pictures directory
+    func accessPicturesDirectory() -> URL? {
+        // First check if the directory exists
+        if !picturesExists {
+            return nil
+        }
+        
+        // Try to use the bookmark
+        if let url = accessURLWithBookmark(picturesBookmarkKey) {
+            print("Successfully accessed pictures directory via bookmark")
+            return url
+        }
+        
+        // If bookmark access fails, try direct access
+        let (_, picturesPath) = getCorrectPhotoBooth()
+        let picturesURL = URL(fileURLWithPath: picturesPath)
+        
+        // If the file exists, try to create a new bookmark
+        if FileManager.default.fileExists(atPath: picturesPath) {
+            // Try to create a new bookmark for future use
+            if picturesURL.startAccessingSecurityScopedResource() {
+                do {
+                    let bookmarkData = try picturesURL.bookmarkData(options: .withSecurityScope,
+                                                                  includingResourceValuesForKeys: nil,
+                                                                  relativeTo: nil)
+                    UserDefaults.standard.set(bookmarkData, forKey: picturesBookmarkKey)
+                    print("Created new pictures bookmark for direct access")
+                    return picturesURL
+                } catch {
+                    print("Failed to create pictures bookmark: \(error)")
+                    picturesURL.stopAccessingSecurityScopedResource()
+                }
+            }
+        }
+        
+        // If all else fails, return nil
+        return nil
+    }
+    
+    // Helper method to get access to iCloud directory
+    func accessICloudDirectory() -> URL? {
+        // Try to use the bookmark
+        if let url = accessURLWithBookmark(iCloudBookmarkKey) {
+            print("Successfully accessed iCloud directory via bookmark")
+            return url
+        }
+        
+        // If bookmark access fails, try direct access
+        let iCloudPath = getICloudDirectory()
+        let iCloudURL = URL(fileURLWithPath: iCloudPath)
+        
+        // If the file exists, try to create a new bookmark
+        if FileManager.default.fileExists(atPath: iCloudPath) {
+            // Try to create a new bookmark for future use
+            if iCloudURL.startAccessingSecurityScopedResource() {
+                do {
+                    let bookmarkData = try iCloudURL.bookmarkData(options: .withSecurityScope,
+                                                              includingResourceValuesForKeys: nil,
+                                                              relativeTo: nil)
+                    UserDefaults.standard.set(bookmarkData, forKey: iCloudBookmarkKey)
+                    print("Created new iCloud bookmark for direct access")
+                    return iCloudURL
+                } catch {
+                    print("Failed to create iCloud bookmark: \(error)")
+                    iCloudURL.stopAccessingSecurityScopedResource()
+                }
+            }
+        }
+        
+        // If all else fails, return nil
+        return nil
     }
 } 

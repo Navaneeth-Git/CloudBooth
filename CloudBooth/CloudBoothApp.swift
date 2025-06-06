@@ -3,9 +3,69 @@ import AppKit
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var menuBarController: MenuBarController?
+    var didShowInitialPermission = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         menuBarController = MenuBarController.shared
+        
+        // Check if we've already requested permissions before
+        let hasRequestedPermissions = UserDefaults.standard.bool(forKey: "hasRequestedPermissions")
+        
+        // Only request permissions if we haven't done so before
+        if !hasRequestedPermissions {
+            // Request permissions on startup
+            Task {
+                // Allow app UI to appear first
+                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                
+                // Show a more user-friendly permission request dialog first
+                if !didShowInitialPermission {
+                    didShowInitialPermission = true
+                    await showPermissionInstructions()
+                    
+                    // Directly force permission requests after instructions
+                    let hasAccess = await FileAccessManager.shared.forceRequestPermissions()
+                    
+                    if hasAccess {
+                        // Mark that we've requested permissions
+                        UserDefaults.standard.set(true, forKey: "hasRequestedPermissions")
+                    } else {
+                        // Try fallback method
+                        let fallbackAccess = await FileAccessManager.shared.ensureDirectoryAccess()
+                        if fallbackAccess {
+                            UserDefaults.standard.set(true, forKey: "hasRequestedPermissions")
+                        }
+                    }
+                }
+            }
+        } else {
+            // Just verify access silently in the background
+            Task {
+                let _ = await FileAccessManager.shared.ensureDirectoryAccess()
+            }
+        }
+    }
+    
+    func showPermissionInstructions() async {
+        // First show an instructions dialog
+        await MainActor.run {
+            let alert = NSAlert()
+            alert.messageText = "CloudBooth Needs Access"
+            alert.informativeText = """
+            CloudBooth needs permission to:
+            1. Your Pictures folder - containing Photo Booth files
+            2. Your iCloud Drive - to save the files
+            
+            In the next dialogs, you'll need to:
+            • Navigate to each folder when prompted
+            • Click "Grant Access" button
+            
+            You'll see multiple folder selection dialogs.
+            """
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Continue")
+            alert.runModal()
+        }
     }
 }
 
@@ -15,10 +75,8 @@ struct CloudBoothApp: App {
     @StateObject private var settings = Settings.shared
     @State private var showSettingsWindow = false
     @State private var showHistoryWindow = false
-    
-    // Window controllers
-    private let settingsWindowController = NSWindowController()
-    private let historyWindowController = NSWindowController()
+    @State private var permissionRetryCount = 0
+    @State private var hasShownPermissionDialogs = false
     
     var body: some Scene {
         WindowGroup {
@@ -29,11 +87,29 @@ struct CloudBoothApp: App {
                 .alwaysOnTop()
                 .onAppear {
                     setupNotificationObservers()
-                    // Initialize window controllers
-                    setupWindowControllers()
                     // Ensure the main window stays in front
                     if let window = NSApplication.shared.windows.first {
                         window.level = .floating
+                    }
+                    
+                    // Only show manual permission dialog if needed (no stored bookmarks)
+                    let hasRequestedPermissions = UserDefaults.standard.bool(forKey: "hasRequestedPermissions")
+                    if !hasRequestedPermissions && !hasShownPermissionDialogs {
+                        hasShownPermissionDialogs = true
+                        
+                        // Try to verify/request permissions only if needed
+                        Task {
+                            let hasAccess = await FileAccessManager.shared.ensureDirectoryAccess()
+                            if !hasAccess {
+                                // Only try forced permission once
+                                let forceAccess = await FileAccessManager.shared.forceRequestPermissions()
+                                if forceAccess {
+                                    UserDefaults.standard.set(true, forKey: "hasRequestedPermissions")
+                                }
+                            } else {
+                                UserDefaults.standard.set(true, forKey: "hasRequestedPermissions")
+                            }
+                        }
                     }
                 }
         }
@@ -59,6 +135,14 @@ struct CloudBoothApp: App {
                     showHistoryWindow = true
                 }
                 .keyboardShortcut("h", modifiers: [.command])
+                
+                Divider()
+                
+                Button("Request Permissions...") {
+                    Task {
+                        _ = await FileAccessManager.shared.forceRequestPermissions()
+                    }
+                }
             }
             
             CommandMenu("View") {
@@ -79,57 +163,38 @@ struct CloudBoothApp: App {
                 }
             }
         }
-        .onChange(of: showSettingsWindow) { _, newValue in
+        .onChange(of: showSettingsWindow) { newValue in
             if newValue {
-                NSApp.activate(ignoringOtherApps: true)
-                settingsWindowController.showWindow(nil)
-                showSettingsWindow = false
+                Task { @MainActor in
+                    openWindow(
+                        title: "CloudBooth Settings",
+                        width: 500, 
+                        height: 460,
+                        content: { SettingsView().environmentObject(settings).alwaysOnTop() }
+                    ) {
+                        Task { @MainActor in
+                            showSettingsWindow = false
+                        }
+                    }
+                }
             }
         }
-        .onChange(of: showHistoryWindow) { _, newValue in
+        .onChange(of: showHistoryWindow) { newValue in
             if newValue {
-                NSApp.activate(ignoringOtherApps: true)
-                historyWindowController.showWindow(nil)
-                showHistoryWindow = false
+                Task { @MainActor in
+                    openWindow(
+                        title: "Sync History",
+                        width: 520, 
+                        height: 500,
+                        content: { HistoryView().environmentObject(settings).alwaysOnTop() }
+                    ) {
+                        Task { @MainActor in
+                            showHistoryWindow = false
+                        }
+                    }
+                }
             }
         }
-    }
-    
-    // Setup window controllers
-    private func setupWindowControllers() {
-        // Settings window
-        let settingsWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 460),
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        settingsWindow.title = "CloudBooth Settings"
-        settingsWindow.center()
-        settingsWindow.isRestorable = false
-        settingsWindow.contentView = NSHostingView(rootView: 
-            SettingsView().environmentObject(settings).alwaysOnTop()
-        )
-        settingsWindow.level = .floating
-        
-        // History window
-        let historyWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 500),
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        historyWindow.title = "Sync History"
-        historyWindow.center()
-        historyWindow.isRestorable = false
-        historyWindow.contentView = NSHostingView(rootView: 
-            HistoryView().environmentObject(settings).alwaysOnTop()
-        )
-        historyWindow.level = .floating
-        
-        // Set window controllers
-        settingsWindowController.window = settingsWindow
-        historyWindowController.window = historyWindow
     }
     
     func openWindow<Content: View>(

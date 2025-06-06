@@ -56,23 +56,12 @@ class Settings: ObservableObject {
     // Auto-sync interval preference
     @Published var autoSyncInterval: SyncInterval = .never {
         didSet {
-            print("🔄 Auto-sync interval changed to: \(autoSyncInterval.rawValue)")
             UserDefaults.standard.setValue(autoSyncInterval.rawValue, forKey: "autoSyncInterval")
-            
-            // Stop existing monitoring/timer
-            stopFolderMonitoring()
-            timer?.invalidate()
-            timer = nil
-            
-            // Set up appropriate monitoring
             if autoSyncInterval == .onNewPhotos {
-                print("🔍 Using folder monitoring for real-time sync")
                 setupFolderMonitoring()
-            } else if autoSyncInterval != .never {
-                print("⏰ Using timer-based sync")
-                scheduleNextSync()
             } else {
-                print("❌ Auto-sync disabled")
+                stopFolderMonitoring()
+                scheduleNextSync()
             }
         }
     }
@@ -88,6 +77,19 @@ class Settings: ObservableObject {
         didSet {
             if let path = customDestinationPath {
                 UserDefaults.standard.setValue(path, forKey: "customDestinationPath")
+                
+                // Save security-scoped bookmark for the custom destination
+                let url = URL(fileURLWithPath: path)
+                do {
+                    let bookmarkData = try url.bookmarkData(
+                        options: .withSecurityScope,
+                        includingResourceValuesForKeys: nil,
+                        relativeTo: nil
+                    )
+                    UserDefaults.standard.set(bookmarkData, forKey: "customDestinationBookmark")
+                } catch {
+                    print("Failed to save bookmark for custom destination: \(error)")
+                }
             }
         }
     }
@@ -114,10 +116,10 @@ class Settings: ObservableObject {
     private var timer: Timer?
     private var fileMonitors: [DispatchSourceFileSystemObject] = []
     private var monitoredFolders: [String] {
-        // Use FileAccessManager to get the correct Photo Booth paths
+        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser.path
         return [
-            FileAccessManager.shared.photoBooth(subFolder: "Pictures").path,
-            FileAccessManager.shared.photoBooth(subFolder: "Originals").path
+            "\(homeDirectory)/Pictures/Photo Booth Library/Pictures",
+            "\(homeDirectory)/Pictures/Photo Booth Library/Originals"
         ]
     }
     
@@ -203,124 +205,56 @@ class Settings: ObservableObject {
     
     // Sets up folder monitoring for both source folders
     private func setupFolderMonitoring() {
-        print("🔍 Setting up folder monitoring for auto-sync...")
+        stopFolderMonitoring() // Clear any existing monitors
         
-        // First, stop any existing monitors
-        stopFolderMonitoring()
-        
-        // Ensure we have permissions
-        Task {
-            // Check permissions before setting up monitors
-            let hasAccess = await FileAccessManager.shared.ensureDirectoryAccess()
-            
-            if !hasAccess {
-                print("⚠️ Cannot set up folder monitoring - missing permissions")
-                
-                // Show alert to user on main thread
-                DispatchQueue.main.async {
-                    let alert = NSAlert()
-                    alert.messageText = "Auto-Sync Disabled"
-                    alert.informativeText = "CloudBooth needs permission to access Photo Booth folders for auto-sync to work. Please grant access in the app."
-                    alert.alertStyle = .warning
-                    alert.addButton(withTitle: "OK")
-                    alert.runModal()
-                }
-                return
-            }
-            
-            // Get the paths we want to monitor
-            let paths = monitoredFolders
-            
-            print("📁 Setting up monitoring for \(paths.count) folders")
-            
-            // Set up monitors for each folder
-            for folderPath in paths {
-                setupMonitorForFolder(folderPath)
-            }
-            
-            print("✅ Folder monitoring setup completed")
+        for folderPath in monitoredFolders {
+            setupMonitorForFolder(folderPath)
         }
     }
     
     // Creates a file system monitor for a specific folder
     private func setupMonitorForFolder(_ folderPath: String) {
         let fileManager = FileManager.default
-        
-        print("📂 Setting up monitoring for: \(folderPath)")
-        
-        // Check if folder exists first
-        var isDirectory: ObjCBool = false
-        guard fileManager.fileExists(atPath: folderPath, isDirectory: &isDirectory) && isDirectory.boolValue else { 
-            print("⚠️ Cannot monitor folder - doesn't exist or isn't a directory: \(folderPath)")
-            return 
-        }
-        
-        // Verify we can access the folder
-        do {
-            let _ = try fileManager.contentsOfDirectory(atPath: folderPath)
-            print("✅ Successfully accessed folder for monitoring: \(folderPath)")
-        } catch {
-            print("❌ Cannot access folder for monitoring: \(folderPath)")
-            print("   Error: \(error.localizedDescription)")
-            return
-        }
+        guard fileManager.fileExists(atPath: folderPath) else { return }
         
         do {
             let fileDescriptor = open(folderPath, O_EVTONLY)
             if fileDescriptor < 0 {
-                let errorString = String(cString: strerror(errno))
-                print("❌ Error opening file descriptor for \(folderPath): \(errorString) (errno: \(errno))")
+                print("Error opening file descriptor for \(folderPath)")
                 return
             }
             
-            print("✅ Successfully opened file descriptor (\(fileDescriptor)) for: \(folderPath)")
-            
             let source = DispatchSource.makeFileSystemObjectSource(
                 fileDescriptor: fileDescriptor,
-                eventMask: .write,
+                eventMask: [.write, .extend, .attrib, .rename],
                 queue: .main
             )
             
             source.setEventHandler {
                 Task { @MainActor in
-                    print("🔔 Detected changes in \(folderPath)")
+                    print("Detected changes in \(folderPath)")
                     // Wait a bit to make sure file operations are complete
                     try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-                    
-                    // Post notification for auto-sync
-                    print("🔄 Triggering auto-sync due to changes in: \(folderPath)")
                     NotificationCenter.default.post(name: Notification.Name("AutoSyncRequested"), object: nil)
                 }
             }
             
             source.setCancelHandler {
-                print("🛑 Closing file descriptor (\(fileDescriptor)) for: \(folderPath)")
                 close(fileDescriptor)
             }
             
             source.resume()
             fileMonitors.append(source)
-            print("✅ File monitoring activated for: \(folderPath)")
-        } catch {
-            print("❌ Failed to set up file monitoring for \(folderPath): \(error.localizedDescription)")
+            
         }
     }
     
     // Stops all active folder monitors
     private func stopFolderMonitoring() {
-        if fileMonitors.isEmpty {
-            print("ℹ️ No active file monitors to stop")
-            return
-        }
-        
-        print("🛑 Stopping \(fileMonitors.count) active file monitors...")
-        
         for monitor in fileMonitors {
             monitor.cancel()
         }
-        
         fileMonitors.removeAll()
-        print("✅ All file monitors stopped")
     }
     
     private func saveSyncHistory() {
@@ -350,29 +284,32 @@ class Settings: ObservableObject {
         if useCustomDestination, let customPath = customDestinationPath {
             return customPath
         } else {
-            // First try to use security-scoped bookmark if available
-            if let bookmarkData = UserDefaults.standard.data(forKey: "iCloudBookmarkData") {
-                do {
-                    var isStale = false
-                    let url = try URL(resolvingBookmarkData: bookmarkData, 
-                                      options: [.withSecurityScope], 
-                                      relativeTo: nil, 
-                                      bookmarkDataIsStale: &isStale)
-                    
-                    // Start accessing the security-scoped resource
-                    if url.startAccessingSecurityScopedResource() {
-                        print("🔍 Using security-scoped bookmarked iCloud path for destination: \(url.path)")
-                        return url.path
-                    }
-                } catch {
-                    print("❌ Failed to use iCloud bookmark for destination: \(error.localizedDescription)")
-                }
-            }
-            
-            // Always use the direct iCloud path instead of container path
-            let directiCloudURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs")
-            print("🔍 Using direct iCloud path for destination: \(directiCloudURL.path)")
-            return directiCloudURL.path
+            // Always use explicit user directory path for iCloud, avoiding container paths
+            return FileAccessManager.shared.getICloudDirectory()
         }
+    }
+    
+    // Access custom destination with security-scoped bookmark
+    func accessCustomDestination() -> URL? {
+        guard useCustomDestination,
+              let bookmarkData = UserDefaults.standard.data(forKey: "customDestinationBookmark") else {
+            return nil
+        }
+        
+        var isStale = false
+        do {
+            let url = try URL(resolvingBookmarkData: bookmarkData,
+                            options: .withSecurityScope,
+                            relativeTo: nil,
+                            bookmarkDataIsStale: &isStale)
+            
+            if url.startAccessingSecurityScopedResource() {
+                return url
+            }
+        } catch {
+            print("Failed to resolve custom destination bookmark: \(error)")
+        }
+        
+        return nil
     }
 } 

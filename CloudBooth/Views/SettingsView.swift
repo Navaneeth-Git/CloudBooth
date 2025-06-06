@@ -110,7 +110,12 @@ struct SettingsView: View {
                                 }
                                 
                                 if !settings.useCustomDestination {
-                                    iCloudPathView()
+                                    Text("\(FileAccessManager.shared.getICloudDirectory())/CloudBooth")
+                                        .font(.system(.callout, design: .monospaced))
+                                        .padding(8)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color(.textBackgroundColor))
+                                        .cornerRadius(4)
                                 }
                                 
                                 // Custom location option
@@ -178,8 +183,9 @@ struct SettingsView: View {
     
     private func selectCustomFolder() {
         let openPanel = NSOpenPanel()
-        openPanel.title = "Select Custom Destination Folder"
-        openPanel.message = "Choose a folder where your CloudBooth files will be synced"
+        openPanel.title = "Select Destination Folder"
+        openPanel.message = "Choose where to save your Photo Booth files"
+        openPanel.showsResizeIndicator = true
         openPanel.canChooseDirectories = true
         openPanel.canChooseFiles = false
         openPanel.allowsMultipleSelection = false
@@ -241,48 +247,6 @@ struct SettingsView: View {
             )
         }
         .buttonStyle(.plain)
-    }
-    
-    private func iCloudPathView() -> some View {
-        // First check if we have a security-scoped bookmark
-        let bookmarkData = UserDefaults.standard.data(forKey: "iCloudBookmarkData")
-        
-        // Get the display path
-        let displayPath: String
-        
-        if let bookmarkData = bookmarkData {
-            do {
-                var isStale = false
-                let url = try URL(resolvingBookmarkData: bookmarkData, 
-                                 options: [.withSecurityScope], 
-                                 relativeTo: nil, 
-                                 bookmarkDataIsStale: &isStale)
-                
-                if url.startAccessingSecurityScopedResource() {
-                    displayPath = "\(url.path)/CloudBooth"
-                    url.stopAccessingSecurityScopedResource()
-                } else {
-                    // Fall back to direct path
-                    let directiCloudURL = FileManager.default.homeDirectoryForCurrentUser
-                    displayPath = "\(directiCloudURL.path)/Library/Mobile Documents/com~apple~CloudDocs/CloudBooth"
-                }
-            } catch {
-                // Fall back to direct path
-                let directiCloudURL = FileManager.default.homeDirectoryForCurrentUser
-                displayPath = "\(directiCloudURL.path)/Library/Mobile Documents/com~apple~CloudDocs/CloudBooth"
-            }
-        } else {
-            // No bookmark, use direct path
-            let directiCloudURL = FileManager.default.homeDirectoryForCurrentUser
-            displayPath = "\(directiCloudURL.path)/Library/Mobile Documents/com~apple~CloudDocs/CloudBooth"
-        }
-        
-        return Text(displayPath)
-            .font(.system(.callout, design: .monospaced))
-            .padding(8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.textBackgroundColor))
-            .cornerRadius(4)
     }
     
     // Format dates consistently
