@@ -85,13 +85,13 @@ You can also manually sync anytime using the **Sync Now** button.
 ## 🖼️ Screenshots
 
 <p float="left">
-  <img src="https://github.com/user-attachments/assets/fe14f595-43ff-4eca-8304-8db08b5a0c00" width="45%" />
-  <img src="https://github.com/user-attachments/assets/0d06cdc2-2c1d-42ed-a219-35daf7b0c34c" width="45%" />
+  <img src="https://github.com/user-attachments/assets/48bedeca-8e0f-4c05-80e5-4785e5653c3c" width="45%" />
+  <img src="https://github.com/user-attachments/assets/fd8fca13-19ff-4fb6-8eab-79b14255ce44" width="45%" />
 </p>
 
 <p float="left">
-  <img src="https://github.com/user-attachments/assets/cf5b0c2b-5b84-4478-a1d2-d922bccb8af2" width="45%" />
-  <img src="https://github.com/user-attachments/assets/c6741e38-f8ab-4b92-a221-01b2ecc3c18a" width="45%" />
+  <img src="https://github.com/user-attachments/assets/f12fa30a-e541-4860-881d-5135ee2f73c8" width="45%" />
+  <img src="https://github.com/user-attachments/assets/7a8c4ffe-03c7-4851-aab0-bee74e169235" width="45%" />
 </p>
 
 ---
