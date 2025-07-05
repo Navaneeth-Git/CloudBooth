@@ -116,3 +116,7 @@ Created by [Navaneeth-Git](https://github.com/Navaneeth-Git)
 If you found this helpful, please star ⭐ the repo or contribute!
 
 > Synchronize icons by [Tempo_doloe - Flaticon](https://www.flaticon.com/free-icons/synchronize)
+
+  ## Like this Project?
+  [![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/quackityduck) [![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/navaneethnandakumar) 
+
